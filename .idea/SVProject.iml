@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.idea/dataSources" />
+      <excludeFolder url="file://$MODULE_DIR$/songManage(管理-前端页面)/audio" />
+      <excludeFolder url="file://$MODULE_DIR$/wangyi(用户前端页面)" />
+      <excludeFolder url="file://$MODULE_DIR$/wangyi(用户前端页面)/.vscode" />
+      <excludeFolder url="file://$MODULE_DIR$/wangyi(用户前端页面)/audio" />
+      <excludeFolder url="file://$MODULE_DIR$/wangyi(用户前端页面)/css" />
+      <excludeFolder url="file://$MODULE_DIR$/wangyi(用户前端页面)/images" />
+      <excludeFolder url="file://$MODULE_DIR$/wangyi(用户前端页面)/js" />
+      <excludeFolder url="file://$MODULE_DIR$/wangyi(用户前端页面)/mobileimage" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

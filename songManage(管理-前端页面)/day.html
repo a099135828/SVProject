@@ -1,0 +1,33 @@
+<!DOCTYPE html>  
+<html lang="zh-CN">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>专辑发布日期选择</title>  
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui-src/dist/css/layui.css">  
+    <script src="https://cdn.jsdelivr.net/npm/layui-src/dist/layui.all.js"></script>  
+</head>  
+<body>  
+
+<div class="layui-form-item">  
+    <label class="layui-form-label">专辑发布日期</label>  
+    <div class="layui-input-block">  
+        <input type="text" id="publishDate" name="publishDate" required placeholder="请输入专辑发布日期" autocomplete="off" class="layui-input">  
+    </div>  
+</div>  
+
+<script>  
+    // 确保在页面加载后执行  
+    layui.use('laydate', function() {  
+        var laydate = layui.laydate;  
+
+        // 初始化日期选择器  
+        laydate.render({  
+            elem: '#publishDate', // 绑定元素  
+            format: 'yyyy-MM-dd', // 格式化日期  
+        });  
+    });  
+</script>  
+
+</body>  
+</html>

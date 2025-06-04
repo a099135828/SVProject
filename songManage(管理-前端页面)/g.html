@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo</title>
+  <!-- 请勿在项目正式环境中引用该 layui.css 地址 -->
+  <link href="./layui/css/layui.css" rel="stylesheet">
+</head>
+<body>
+<input type="file" id="file-input" accept="image/*" style="display: none;"> 
+<button type="button" class="layui-btn" id="ID-upload-demo-btn">
+  <i class="layui-icon layui-icon-upload"></i> 单图片上传
+</button>
+<div style="width: 132px;">
+  <div class="layui-upload-list">
+    <img class="layui-upload-img" id="ID-upload-demo-img" style="width: 100%; height: 92px;">
+    <div id="ID-upload-demo-text"></div>
+  </div>
+  <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="filter-demo">
+    <div class="layui-progress-bar" lay-percent=""></div>
+  </div>
+</div>
+<hr style="margin: 21px 0;">
+
+  
+<!-- 请勿在项目正式环境中引用该 layui.js 地址 -->
+<script src="./layui/layui.js"></script>
+<script src="./jquery-3.7.1.min.js"></script>
+<script>
+layui.use(function(){
+  var layer = layui.layer;
+  var $ = layui.$;
+  var element = layui.element; // 引用 element 模块
+
+  $('#ID-upload-demo-btn').on('click', function(event) {
+    event.preventDefault(); // 阻止默认提交
+    $('#file-input').click(); // 打开文件选择器
+  });
+  $('#file-input').on('change', function() {
+    var file = this.files[0];
+    if (file) {
+      var formData = new FormData();
+      formData.append('file', file);
+
+      // 使用 URL.createObjectURL 生成预览图像的 URL
+      var imgURL = URL.createObjectURL(file);
+      $('#ID-upload-demo-img').attr('src', imgURL); // 显示预览图像
+      
+      $.ajax({
+        url: 'http://localhost:8080/Sheetupload', // 你的上传接口
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        beforeSend: function() {
+          layer.msg('上传中', {icon: 16, time: 0});
+          element.progress('filter-demo', '0%'); // 进度条复位
+        },
+        xhr: function() {
+          var xhr = new window.XMLHttpRequest();
+          // 上传进度
+          xhr.upload.addEventListener('progress', function(evt) {
+            if (evt.lengthComputable) {
+              var percentComplete = evt.loaded / evt.total;
+              percentComplete = Math.round(percentComplete * 100); // 计算进度百分比
+              element.progress('filter-demo', percentComplete + '%'); // 更新进度条
+              if (percentComplete === 100) {
+                layer.msg('上传完毕', {icon: 1});
+              }
+            }
+          }, false);
+          return xhr;
+        },
+        success: function(res) {
+          console.log(res.filePath);
+          layer.msg('上传成功', {icon: 1});
+        },
+        error: function() {
+          layer.msg('上传失败', {icon: 2});
+        }
+      });
+    }
+  });
+});
+
+</script>
+
+</body>
+</html>

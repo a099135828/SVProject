@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>table 组件综合演示 - Layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Access-Control-Allow-Origin" content="*">
+  <link href="./layui/css/layui.css" rel="stylesheet">
+</head>
+<body>
+<div class="layui-side">
+  <ul class="layui-nav layui-nav-tree layui-nav-side" style="padding-top:30px">
+    <li style="width: 200px;height: 50px;margin-left: 18px;">
+      <p href="javascript:;" style="font-size: 24px; font-weight: bolder; padding-bottom: 20px; color:#f5f5f5">音乐管理平台</p>
+    </li>
+    <li class="layui-nav-item ">
+      <a href="./songTable.html">歌曲管理</a>
+    </li>
+    <li class="layui-nav-item">
+      <a href="./artistTable.html">歌手管理</a>
+    </li>
+    <li class="layui-nav-item "><a href="./albumTable.html">专辑管理</a></li>
+    <li class="layui-nav-item"><a href="./tagTable.html">音乐标签管理</a></li>
+    <li class="layui-nav-item layui-this"><a href="./userTable.html">用户管理</a></li>
+    
+  </ul>
+  <script src="./layui/layui.js"></script>
+  <script>
+  layui.use(function(){
+    var element = layui.element;
+    element.render('nav');
+  });
+  </script>
+</div>
+
+
+<div class="layui-body" style="width: 87vw;overflow: hidden;">
+<div style="padding: 16px ;width: 95%; overflow-x: hidden;"> 
+  <table class="layui-hide" id="test" lay-filter="test"></table>
+</div>
+<script type="text/html" id="toolbarDemo">
+  <div class="layui-btn-container">
+    <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+    <button class="layui-btn layui-btn-sm" lay-event="getData">获取当前页数据</button>
+    <button class="layui-btn layui-btn-sm" id="dropdownButton">
+      下拉按钮 
+      <i class="layui-icon layui-icon-down layui-font-12"></i>
+    </button>
+    <button class="layui-btn layui-btn-sm layui-btn-primary" id="rowMode">
+      <span>{{= d.lineStyle ? '多行' : '单行' }}模式</span>
+      <i class="layui-icon layui-icon-down layui-font-12"></i>
+    </button>
+  </div>
+</script>
+<script type="text/html" id="barDemo">
+  <div class="layui-clear-space">
+    <a class="layui-btn layui-btn-xs" lay-event="delete">删除</a>
+  </div>
+</script>  
+
+
+
+<script>
+layui.use(['table', 'dropdown', 'layer'], function(){
+  var table = layui.table;
+  var dropdown = layui.dropdown;
+  var layer = layui.layer;
+  
+  // 创建渲染实例
+  var insTb = table.render({
+    elem: '#test',
+    url: 'http://localhost:8080/user/allUsers', 
+    toolbar: '#toolbarDemo',
+    defaultToolbar: ['filter', 'exports', 'print', { // 右上角工具图标
+      title: '提示',
+      layEvent: 'LAYTABLE_TIPS',
+      icon: 'layui-icon-tips',
+      onClick: function(obj) { // 2.9.12+
+        layer.alert('自定义工具栏图标按钮');
+      }
+    }],
+    height: 'full-35', // 最大高度减去其他容器已占有的高度差
+    css: [ // 重设当前表格样式
+      '.layui-table-tool-temp{padding-right: 145px;}'
+    ].join(''),
+    cellMinWidth: 80,
+    totalRow: true, // 开启合计行
+    page: true,
+    cols: [[
+      {type: 'checkbox', fixed: 'left'},
+
+      {field:'userid', fixed: 'left', width:80, title: '用户id'},
+      {field:'nickname', width:130, title: '昵称'},
+      {field:'password', title:'密码',  width:200 ,
+         templet: function(row) {
+        // 这里的 row 是当前行的数据对象
+        return '******'; // 使用占位符隐藏密码
+      } 
+      },
+      {field:'phoneNumber', title:'电话号码',  width:200 },
+      {field:'birthdate', title:'出生日期',  width:120 },
+      {field:'avatar', title:'头像',  width:120 },
+
+      {fixed: 'right', title:'操作', width: 134, minWidth: 125, toolbar: '#barDemo'}
+    ]],
+    done: function(){  //done是一个回调函数，在表格数据加载完成之后被调用
+      var id = this.id;
+      // 下拉按钮测试
+      dropdown.render({
+        elem: '#dropdownButton', // 可绑定在任意元素中，此处以上述按钮为例
+        data: [{
+          id: 'delete',
+          title: '删除'
+        },{
+          id: 'select',
+          title: '查询'
+        }],
+        // 菜单被点击的事件
+        click: function(obj){
+          var checkStatus = table.checkStatus(id)
+          var data = checkStatus.data; // 获取选中的数据
+          switch(obj.id){
+            case 'delete':
+              if(data.length === 0){
+                return layer.msg('请至少选择一行');
+              }
+              layer.msg('delete event');
+              layer.open({
+                title: '删除',
+                type: 1, //表示弹出的是一个页面层
+                area: ['450px','150px'],
+                content: `  
+                 <form class="layui-form" id="deleteForm" style="padding: 16px;"> 
+                    <div class="layui-form-item layui-form-text">  
+                      <div class="layui-input-block">  
+                        <button class="layui-btn" lay-submit lay-filter="deleteUser">确认删除</button>  
+                        <button type="button" class="layui-btn layui-btn-primary" id="closeBtn">取消</button>  
+                      </div>  
+                    </div>  
+                  </form>  
+                 `,  
+                }),
+                layui.use(['form', 'layer'], function(){  //use方法用于按需加载模块，然后执行回调函数来执行这些模块
+                  var form = layui.form;//获取表单模块
+                  var layer = layui.layer;//获取弹出层模块
+                  const deleteUsers = (data) => {  
+                    if (!data || data.length === 0) {  
+                        console.error('没有要删除的歌曲');  
+                        return;  
+                    }  
+                    form.on('submit(deleteUser)', function() {  
+                    const deletePromises = []; // 存储所有删除请求的 Promise  
+
+                    for (let i = 0; i < data.length; i++) { 
+                      console.log(i) ;
+                        const userid = data[i].userid;  
+                        // 将每个 DELETE 请求的 Promise 添加到数组中  
+                        const deletePromise = fetch('http://localhost:8080/user' + userid, {  
+                            method: 'DELETE',  
+                        })  
+                        .then(response => {  
+                            if (!response.ok) {  
+                                throw new Error('Failed to delete user with ID: ' + userid);  
+                            }  
+                            return response.json(); // 返回解析后的数据  
+                        })  
+                        .catch(error => {  
+                            console.error('Error deleting user with ID:', userid, error);  
+                        });  
+                        deletePromises.push(deletePromise); // 存储 Promise  
+                    }  
+
+                    // 等待所有删除请求完成  
+                    Promise.all(deletePromises).then(results => {  
+                        console.log('全部用户删除成功:', results);  
+                        layer.closeAll(); // 关闭所有弹窗  
+                        location.reload(); // 刷新页面以显示新数据  
+                    }).catch(error => {  
+                        console.error('删除过程中出现错误:', error);  
+                    });  
+
+                    return false; // 阻止表单跳转。如果需要表单跳转，去掉这段即可。
+                  }); 
+
+                };
+                deleteUsers(data);
+
+                  // 取消按钮事件
+                  document.getElementById('closeBtn').addEventListener('click', function() {
+                    layer.closeAll(); // 关闭所有弹窗
+                  });
+
+                });
+            break;
+            case 'select':
+              layer.open({
+                title: '查询',
+                type: 1,
+                area: ['60%','40%'],
+                content: ` 
+                 <form class="layui-form" id="selectForm" style="padding: 16px;"> 
+                  <div class="layui-form-item">  
+                      <label class="layui-form-label">查询</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="nickname" placeholder="请输入昵称" autocomplete="off" class="layui-input">  
+                      </div>  
+                    </div>  
+                    <div class="layui-form-item layui-form-text">  
+                      <div class="layui-input-block">  
+                        <button class="layui-btn" lay-submit lay-filter="selectUser">确认</button>  
+                        <button type="button" class="layui-btn layui-btn-primary" id="closeBtn">取消</button>  
+                      </div>  
+                    </div>  
+                  </form>  
+                 `,  
+                }),
+                layui.use(['form', 'layer','table'], function(){
+                var form = layui.form;
+                var layer = layui.layer;
+                var table = layui.table; 
+
+
+                  form.on('submit(selectUser)', function(data){
+                    var formData = data.field;
+                    var value= formData.nickname;
+                    console.log(formData.nickname);  
+
+                    if(!value){
+                      layer.msg('请输入搜索内容')
+                      return false;
+                    }
+
+                    table.reload('test',{
+                      elem: '#test',
+                      url:'http://localhost:8080/user/findByNickname?nickname='+value,
+                      method:'post',
+                      done: function(res, curr, count) {  
+                            // Check if the response is valid  
+                            if (!res || !res.data) {  
+                                layer.msg('未找到该用户'); // Notify if no user found  
+                                return; // Prevent further actions  
+                            }  
+                            layer.closeAll(); // Close any open layer  
+                        },  
+                        fail: function (error) {  
+                            console.error('Error loading data:', error);  
+                            layer.msg('数据加载失败，请检查服务器'); // Notify about the failure  
+                        }  
+                    });  
+                    return false;
+                    
+                  });
+
+                  // 取消按钮事件
+                  document.getElementById('closeBtn').addEventListener('click', function() {
+                    layer.closeAll(); // 关闭所有弹窗
+                  });
+                    
+                });   
+                break;   
+          }
+        }
+        
+      });
+ 
+  
+ 
+      // 行模式
+      dropdown.render({
+        elem: '#rowMode',
+        data: [{
+          id: 'default-row',
+          title: '单行模式（默认）'
+        },{
+          id: 'multi-row',
+          title: '多行模式'
+        }],
+        // 菜单被点击的事件
+        click: function(obj){
+          var checkStatus = table.checkStatus(id)
+          var data = checkStatus.data; // 获取选中的数据
+          switch(obj.id){
+            case 'default-row':
+              table.reload('test', {
+                lineStyle: null // 恢复单行
+              });
+              layer.msg('已设为单行');
+            break;
+            case 'multi-row':
+              table.reload('test', {
+                // 设置行样式，此处以设置多行高度为例。若为单行，则没必要设置改参数 - 注：v2.7.0 新增
+                lineStyle: 'height: 95px;' 
+              });
+              layer.msg('即通过设置 lineStyle 参数可开启多行');
+            break;
+          }
+        }
+      });
+    },
+    error: function(res, msg){
+      console.log(res, msg)
+    }
+  });
+  
+  // 工具栏事件
+  table.on('toolbar(test)', function(obj){
+    var id = obj.config.id;
+    var checkStatus = table.checkStatus(id);
+    var othis = lay(this);
+    switch(obj.event){
+      case 'getCheckData':
+        var data = checkStatus.data;
+        layer.alert(layui.util.escape(JSON.stringify(data)));
+        break;
+      case 'getData':
+        var getData = table.getData(id);
+        console.log(getData);
+        layer.alert(layui.util.escape(JSON.stringify(getData)));
+        break;
+    };
+  });
+  // 表头自定义元素工具事件 --- 2.8.8+
+  table.on('colTool(test)', function(obj){
+    var event = obj.event;
+    console.log(obj);
+    if(event === 'email-tips'){
+      layer.alert(layui.util.escape(JSON.stringify(obj.col)), {
+        title: '当前列属性配置项'
+      });
+    }
+  });
+  
+  // 触发单元格工具事件
+  table.on('tool(test)', function(obj){ // 双击 toolDouble
+    // console.log(obj)
+    //obj.data可以获取当前行的所有数据
+    var data = obj.data; // 获取当前行的数据 
+    if(obj.event === 'delete'){
+            layer.confirm('真的删除行 [id: '+ data.userid +'] 么', function(index){
+              
+              obj.del(); // 删除对应行（tr）的DOM结构
+              layer.close(index);
+              // 向服务端发送删除指令
+                     // 向服务端发送删除指令
+              fetch('http://localhost:8080/user/' + data.userid, {
+                method: 'DELETE',
+              })
+              .then(response => {
+                if (response.ok) {
+                  return response.json();
+                }
+                throw new Error('Failed todelete user');
+              })
+              .then(data => {
+                console.log('delete successful', data);
+                layer.closeAll();  // 关闭所有弹窗
+                location.reload(); // 刷新页面以显示新数据
+                console.log('Received JSON data:', data); // 这里应该能看到解析后的数据
+              })
+              .catch(error => console.error('Error delete user:', error));
+
+
+            });
+          }
+      })
+  });
+
+
+
+</script>
+</div>
+</body>
+</html>

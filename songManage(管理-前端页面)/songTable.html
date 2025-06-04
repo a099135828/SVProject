@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>table 组件综合演示 - Layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Access-Control-Allow-Origin" content="*">
+  <link href="./layui/css/layui.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/xm-select/dist/css/xm-select.css">
+
+  <style>
+    .artist-list {  
+    border: 1px solid #ccc;  
+    max-height: 200px;  
+    overflow-y: auto;  
+    background-color: white;  
+    position: absolute; /* 让下拉列表显示在输入框下方 */  
+    z-index: 1000; /* 确保在上面显示 */  
+    width: 100%; /* 与输入框宽度相同 */  
+    }  
+
+    .artist-list div {  
+        padding: 8px;  
+        cursor: pointer;  
+    }  
+
+    .artist-list div:hover {  
+        background-color: #f0f0f0; /* 悬停效果 */  
+    }  
+    .album-list {  
+    border: 1px solid #ccc;  
+    max-height: 200px;  
+    overflow-y: auto;  
+    background-color: white;  
+    position: absolute; /* Ensure it displays below the input */  
+    z-index: 1000;  
+    width: 100%; /* Match input width */  
+    }  
+
+    .album-list div {  
+        padding: 8px;  
+        cursor: pointer;  
+    }  
+
+    .album-list div:hover {  
+        background-color: #f0f0f0; /* Hover effect */  
+    }  
+  </style>
+</head>
+<body>
+<div class="layui-side">
+  <ul class="layui-nav layui-nav-tree layui-nav-side" style="padding-top:30px">
+    <li style="width: 200px;height: 50px;margin-left: 18px;">
+      <p href="javascript:;" style="font-size: 24px; font-weight: bolder; padding-bottom: 20px; color:#f5f5f5">音乐管理平台</p>
+    </li>
+    <li class="layui-nav-item layui-this">
+      <a href="./songTable.html">歌曲管理</a>
+    </li>
+    <li class="layui-nav-item">
+      <a href="./artistTable.html">歌手管理</a>
+    </li>
+    <li class="layui-nav-item"><a href="./albumTable.html">专辑管理</a></li>
+    <li class="layui-nav-item"><a href="./tagTable.html">音乐标签管理</a></li>
+    <li class="layui-nav-item"><a href="./userTable.html">用户管理</a></li>
+    
+    <a style="color: wheat; position: absolute;bottom: 30px;">计科221 1220204006 沈于欣</a>
+  </ul>
+  
+  <script type="text/html" id="imageTpl">
+    <img src="{{d.songImg}}" alt="歌曲图片" style="height: 100%; width: auto; object-fit: cover;">
+  </script>
+  
+  <script type="text/html" id="audioTpl">
+    <audio controls>
+      <source src="{{d.source}}" type="audio/mpeg" style="height: 80%; width: auto; "/>
+    </audio>
+  </script>
+  <script src="./layui/layui.js"></script>
+  <script src="https://unpkg.com/xm-select/dist/js/xm-select.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
+  <script>
+  layui.use(function(){
+    var element = layui.element;
+    element.render('nav');
+  });
+  </script>
+</div>
+
+
+<div class="layui-body" style="width: 87vw;overflow: hidden;">
+<div style="padding: 16px ;width: 95%; overflow-x: hidden;"> 
+  <table class="layui-hide" id="test" lay-filter="test"></table>
+</div>
+<script type="text/html" id="toolbarDemo">
+  <div class="layui-btn-container">
+    <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+    <button class="layui-btn layui-btn-sm" lay-event="getData">获取当前页数据</button>
+    <button class="layui-btn layui-btn-sm" id="dropdownButton">
+      下拉按钮 
+      <i class="layui-icon layui-icon-down layui-font-12"></i>
+    </button>
+    <button class="layui-btn layui-btn-sm layui-bg-blue" id="reloadTest">
+      重载测试 
+      <i class="layui-icon layui-icon-down layui-font-12"></i>
+    </button>
+    <button class="layui-btn layui-btn-sm layui-btn-primary" id="rowMode">
+      <span>{{= d.lineStyle ? '多行' : '单行' }}模式</span>
+      <i class="layui-icon layui-icon-down layui-font-12"></i>
+    </button>
+  </div>
+</script>
+<script type="text/html" id="barDemo">
+  <div class="layui-clear-space">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs" lay-event="more">
+      更多 
+      <i class="layui-icon layui-icon-down"></i>
+    </a>
+  </div>
+</script>  
+
+
+
+<script>
+
+  function searchArtist() {  
+      var keyword = document.getElementById('artistName').value; // 获取输入框的值  
+      var artistList = document.getElementById('artistList');  
+
+      if (keyword.length > 0) { // 如果输入框有内容  
+          var xhr = new XMLHttpRequest();  
+          xhr.open('GET', 'http://localhost:8080/api/artists/byName/noPage?artistname=' + encodeURIComponent(keyword), true);  
+          xhr.onload = function() {  
+              if (xhr.status === 200) {  
+                  var response = JSON.parse(xhr.responseText); // 解析返回的JSON数据  
+                  if (response.code === 0 && response.data && Array.isArray(response.data)) {   
+                      var artists = response.data;  // 获取返回的艺术家数组  
+                      artistList.innerHTML = ''; // 清空列表  
+                      artists.forEach(function(artist) {  
+                          var artistItem = document.createElement('div'); // 创建每个艺术家的列表项  
+                          artistItem.textContent = artist.artistname; // 设置艺术家名称  
+                          artistItem.dataset.artistid = artist.artistid; // 保存 artistid  
+                          artistItem.onclick = function() {  
+                              document.getElementById('artistId').value = artistItem.dataset.artistid; // 设置隐藏字段  
+                              document.getElementById('artistName').value = artistItem.textContent; // 设置输入框为选中的歌手名  
+                              artistList.style.display = 'none'; // 选择后隐藏列表  
+                          };  
+                          artistList.appendChild(artistItem); // 添加到列表中  
+                      });  
+
+                      // 如果有数据，显示列表  
+                      if (artists.length > 0) {  
+                          artistList.style.display = 'block'; // 显示列表  
+                      } else {  
+                          artistList.style.display = 'none'; // 隐藏列表  
+                      }  
+                  } else {  
+                      artistList.style.display = 'none'; // 数据格式不正确时隐藏列表  
+                  }  
+              } else {  
+                  artistList.style.display = 'none'; // 请求失败时隐藏列表  
+              }  
+          };  
+          xhr.onerror = function() {  
+              artistList.style.display = 'none'; // 网络故障时隐藏列表  
+          };  
+          xhr.send();  
+      } else {  
+          artistList.style.display = 'none'; // 输入框为空，隐藏列表  
+      }  
+  }  
+
+  function searchAlbum() {  
+      var albumKeyword = document.getElementById('albumName').value;  
+      var artistId = document.getElementById('artistId').value; // 获取选中的歌手ID  
+      var albumList = document.getElementById('albumList');  
+
+     
+      if (albumKeyword.length > 0 && artistId) { // 确保歌手ID存在  
+          var xhr = new XMLHttpRequest();  
+          xhr.open('GET', 'http://localhost:8080/api/albums/byArtistAndKeyword?artistId=' + encodeURIComponent(artistId) + '&albumName=' + encodeURIComponent(albumKeyword), true);  
+          xhr.onload = function() {  
+              if (xhr.status === 200) {  
+                  
+                  if (xhr.responseText.trim() === "") { // 检查是否为空  
+                      console.error("Received empty response");  
+                      albumList.style.display = 'none'; // 隐藏专辑列表  
+                      return;  
+                  }  
+
+                  try {  
+                      var response = JSON.parse(xhr.responseText);  
+                      albumList.innerHTML = '';  
+                      
+                      // 直接处理返回的专辑数组  
+                      if (Array.isArray(response) && response.length > 0) {  
+                          response.forEach(function(album) {  
+                              var albumItem = document.createElement('div');  
+                              albumItem.textContent = album.albumname;  
+                              albumItem.dataset.albumid = album.albumid;  
+                              albumItem.onclick = function() {  
+                                  document.getElementById('albumId').value = albumItem.dataset.albumid; // 设置隐藏字段为选中的专辑ID  
+                                  document.getElementById('albumName').value = albumItem.textContent; // 更新输入框内容  
+                                  albumList.style.display = 'none'; // 选择后隐藏列表  
+                              };  
+                              albumList.appendChild(albumItem);  
+                          });  
+                          albumList.style.display = 'block'; // 显示专辑列表  
+                      } else {  
+                          albumList.style.display = 'none'; // 没有专辑时隐藏列表  
+                      }  
+                  } catch (e) {  
+                      console.error("JSON parsing error:", e); // 输出解析错误  
+                  }  
+              } else {  
+                  console.error("Error fetching data:", xhr.statusText);  
+                  albumList.style.display = 'none'; // 隐藏专辑列表  
+              }  
+          };  
+          xhr.onerror = function() {  
+              console.error("Request failed");  
+              albumList.style.display = 'none'; // 隐藏专辑列表  
+          };  
+          xhr.send();  
+      } else {  
+          albumList.style.display = 'none'; // 隐藏专辑列表  
+      }  
+  }  
+
+
+
+    function selectArtist(artistId) {  
+        var selectBox = document.getElementById('artistSelect');  
+        var selectedOption = selectBox.options[selectBox.selectedIndex]; // 获取所选项  
+        var artistNameInput = document.getElementById('artistName');  
+        var artistIdInput = document.getElementById('artistId');  
+
+        if (selectedOption.value) { // 如果选择了有效的艺术家  
+            artistNameInput.value = selectedOption.text; // 将艺术家名称填入输入框  
+            artistIdInput.value = artistId; // 将 artistId 填入隐藏输入框  
+        } else {  
+            artistNameInput.value = ""; // 清空输入框  
+            artistIdInput.value = ""; // 清空隐藏输入框  
+        }  
+    }  
+
+
+layui.use(['table', 'dropdown', 'layer'], function(){  //表格、下拉菜单、弹出层
+  var table = layui.table;
+  var dropdown = layui.dropdown;
+  var layer = layui.layer;
+  
+  // 创建渲染实例
+  var insTb = table.render({
+    elem: '#test',
+    url: 'http://localhost:8080/api/songs/allsongs', 
+    toolbar: '#toolbarDemo',
+    defaultToolbar: ['filter', 'exports', 'print', { // 右上角工具图标
+      title: '提示',
+      layEvent: 'LAYTABLE_TIPS',
+      icon: 'layui-icon-tips',
+      onClick: function(obj) { // 2.9.12+
+        layer.alert('自定义工具栏图标按钮');
+      }
+    }],
+    height: 'full-35', // 最大高度减去其他容器已占有的高度差
+    css: [ // 重设当前表格样式
+    '.layui-table-tool-temp{padding-right: 145px;}',
+    '.layui-table-view .layui-table td{height: 60px; vertical-align: middle;}', 
+    '.layui-table-cell {height: 60px !important; vertical-align: middle !important;}'
+    
+   
+    ].join(''),
+    cellMinWidth: 80,
+    totalRow: true, // 开启合计行
+    page: true,
+    cols: [[
+      {type: 'checkbox', fixed: 'left'},
+
+      {field:'songid', fixed: 'left', width:80, title: '歌曲id'},
+      {field:'songname', width:100, title: '歌曲名称'},
+      {field:'artistid', title:'歌手id',  width:120 },
+      {field:'artistname', title:'歌手名字',  width:120 },
+      {field:'albumid', width:100, title: '专辑id'},
+      {field:'albumname', width:100, title: '所属专辑'},
+      {field:'threeDaysViews', width:100, title: '三天内播放量'},
+      {field:'listenTimes', width:100, title: '歌曲被听次数'},
+      {field:'likeNum', width:100, title: '收藏次数'},
+      {field:'reviews', width:100, title: '评论数量'},
+      {field:'songImg', width:120, title: '歌曲图片',templet: '#imageTpl'}, 
+      {field:'tags', width:120, title: '歌曲标签' },
+      {field:'original', width:100, title: '是否原创',templet: function(d) {
+        return d.original === true ? '是' : '否';
+      }},
+      {field:'originalSinger', width:100, title: '是否原唱',templet: function(d) {
+        return d.originalSinger === true ? '是' : '否';
+      }},
+      {field:'vip', width:100, title: '是否需要vip',templet: function(d) {
+        return d.vip === true ? '是' : '否';
+      }},
+      {field:'source', width:350, title: '歌曲资源',templet: '#audioTpl'},
+
+      {fixed: 'right', title:'操作', width: 134, minWidth: 125, toolbar: '#barDemo'}
+    ]],
+    done: function(){  //done是一个回调函数，在表格数据加载完成之后被调用
+      var id = this.id;
+      // 下拉按钮测试
+      dropdown.render({
+        elem: '#dropdownButton', // 可绑定在任意元素中，此处以上述按钮为例
+        data: [{
+          id: 'add',
+          title: '添加'
+        },{
+          id: 'update',
+          title: '编辑'
+        },{
+          id: 'delete',
+          title: '删除'
+        },{
+          id: 'select',
+          title: '查询'
+        }],
+        // 菜单被点击的事件
+        click: function(obj){
+          var checkStatus = table.checkStatus(id)
+          var data = checkStatus.data; // 获取选中的数据
+
+        
+            
+          switch(obj.id){
+            case 'add':
+              layer.open({
+                title: '添加',
+                type: 1,
+                area: ['80%','80%'],
+                content: `  
+                  <form class="layui-form" id="addForm" style="padding: 16px;">  
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲名称</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="songname" required  placeholder="请输入歌曲名称" autocomplete="off" class="layui-input">  
+                      </div>  
+                    </div>  
+                    <div class="layui-form-item">
+                      <label class="layui-form-label">歌手名称</label>
+                      <div class="layui-input-block">
+                        <input type="text" name="artistname" id="artistName" placeholder="请输入歌手名称" autocomplete="off" class="layui-input" oninput="searchArtist()">
+                        <input type="hidden" name="artistid" id="artistId">
+                        <div id="artistList" class="artist-list" style="display: none;"></div>
+                      </div>
+                    </div>
+                    <div class="layui-form-item">  
+                        <label class="layui-form-label">专辑名称</label>  
+                        <div class="layui-input-block">  
+                            <input type="text" name="albumname" id="albumName" placeholder="请输入专辑名称" autocomplete="off" class="layui-input" oninput="searchAlbum()">  
+                            <input type="hidden" name="albumid" id="albumId">  
+                            <div id="albumList" class="album-list" style="display: none;"></div> 
+                        </div>  
+                    </div>  
+                     <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲图片</label>  
+                      <div class="layui-input-block">  
+                        <button type="button" class="layui-btn" id="ID-upload-demo-btn">
+                          <i class="layui-icon layui-icon-upload"></i> 单图片上传
+                        </button>
+                        <div style="width: 132px;">
+                          <div class="layui-upload-list">
+                            <img class="layui-upload-img" id="ID-upload-demo-img" style="width: 100%; height: 92px;">
+                            <div id="ID-upload-demo-text"></div>
+                          </div>
+                          <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="filter-demo">
+                            <div class="layui-progress-bar" lay-percent=""></div>
+                          </div>
+                        </div>
+                        <hr style="margin: 21px 0;">
+                      </div>  
+                    </div>
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲标签</label>  
+                      <div class="layui-input-block" id="tags-checkbox">
+                        
+                      </div>  
+                    
+                    </div>
+                   
+                    <div class="layui-form-item">
+                      <label class="layui-form-label">是否原创</label>
+                      <div class="layui-input-block">
+                        <input type="radio" name="original" value="true" title="是" lay-filter="filterTest">
+                        <input type="radio" name="original" value="false" title="否" lay-filter="filterTest">
+                        
+                    </div>
+
+                    <div class="layui-form-item">
+                      <label class="layui-form-label">是否原唱</label>
+                      <div class="layui-input-block">
+                        <input type="radio" name="originalSinger" value="true" title="是" lay-filter="filterTest">
+                        <input type="radio" name="originalSinger" value="false" title="否" lay-filter="filterTest">
+                       
+                    </div>
+
+                    <div class="layui-form-item">
+                      <label class="layui-form-label">是否需要vip</label>
+                      <div class="layui-input-block">
+                        <input type="radio" name="vip" value="true" title="是" lay-filter="filterTest">
+                        <input type="radio" name="vip" value="false" title="否" lay-filter="filterTest">
+                       
+                      </div>
+                    </div>
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">音频地址</label>  
+                      <div class="layui-input-block">  
+                          <button type="button" class="layui-btn" id="ID-uploadAudio-demo-btn">  
+                              <i class="layui-icon layui-icon-upload"></i> 音频上传  
+                          </button>  
+                          <div style="width: 132px;">  
+                              <div class="layui-upload-list">  
+                                  <audio id="ID-upload-demo-audio" controls style="width: 100%; height: auto; display: none;">  
+                                      <source src="" id="audioSource">  
+                                      您的浏览器不支持 audio 标签。  
+                                  </audio>  
+                                  <div id="ID-uploadAudio-demo-text"></div>  
+                              </div>  
+                              <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="filter-demo-Audio">  
+                                  <div class="layui-progress-bar" lay-percent=""></div>  
+                              </div>  
+                          </div>  
+                          <hr style="margin: 21px 0;"> 
+                      </div>  
+                    </div>
+                    <div class="layui-form-item layui-form-text">  
+                      <div class="layui-input-block">  
+                        <button class="layui-btn" lay-submit lay-filter="addSong">添加歌曲</button>  
+                        <button type="button" class="layui-btn layui-btn-primary" id="closeBtn">取消</button>  
+                      </div>  
+                    </div>  
+                  </form>  
+             `,  
+              });
+
+              
+              
+              layui.use(['form', 'layer','upload'], function(){  //表示使用当前layui组件时，希望使用form:表单；layer：弹出层；upload：文件上传
+                var form = layui.form;
+                var layer = layui.layer;
+                var upload = layui.upload;  
+                var element = layui.element;  
+
+                // 定义一个全局变量来存储上传后的图片信息  
+                let uploadedImageUrl = '';  
+                let uploadedAudioUrl = ''; 
+
+
+                // 动态获取并渲染标签  
+                fetch('http://localhost:8080/api/tags/allTags')  
+                    .then(response => response.json())  
+                    .then(data => {  
+                        var tagContainer = document.getElementById('tags-checkbox');  
+                        data.forEach(tag => {  
+                            // 创建复选框 html  
+                            var checkboxHtml = `  
+                                <input type="checkbox" name="tags" value="${tag.tagid}" title="${tag.style}">  
+                            `;  
+                            tagContainer.innerHTML += checkboxHtml;  
+                        });  
+                        form.render(); // 重新渲染表单  
+                    })  
+                    .catch(error => console.error('Error fetching tags:', error));  
+
+                      // 单图片上传  
+                  var uploadInstImage = upload.render({  
+                      elem: '#ID-upload-demo-btn',  
+                      url: 'http://localhost:8080/api/songs/upload', 
+                      acceptMime: 'image/*', // 接受的文件类型为图片
+                      accept: 'images', // 允许的文件类型
+                      before: function(obj){  
+                          // 预读本地文件示例，不支持ie8  
+                          obj.preview(function(index, file, result){  
+                              $('#ID-upload-demo-img').attr('src', result).show(); // 显示图片链接（base64）
+                          });  
+                          
+                          element.progress('filter-demo', '0%'); // 进度条复位  
+                          layer.msg('上传中', {icon: 16, time: 0});  
+                      },  
+                      done: function(res){  
+                          // 若上传失败  
+                          if(res.code > 0){  
+                              return layer.msg('上传失败');  
+                          }  
+                          // 上传成功的一些操作 
+                          console.log('上传成功，返回的数据:', res);  
+                          $('#ID-upload-demo-text').html(''); // 置空上传失败的状态  
+                          uploadedImageUrl = res.data; 
+                      },  
+                      error: function(){  
+                          // 演示失败状态，并实现重传  
+                          var demoText = $('#ID-upload-demo-text');  
+                          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');  
+                          demoText.find('.demo-reload').on('click', function(){  
+                              uploadInstImage.upload();  
+                          });  
+                      },  
+                      // 进度条  
+                      progress: function(n, elem, e){  
+                          element.progress('filter-demo', n + '%'); // 可配合 layui 进度条元素使用  
+                          if(n == 100){  
+                              layer.msg('上传完毕', {icon: 1});  
+                          }  
+                      }  
+                  });  
+
+                  // 音频上传  
+                  var uploadInstAudio = upload.render({  
+                      elem: '#ID-uploadAudio-demo-btn',  
+                      url: 'http://localhost:8080/api/songs/uploadAudio',   
+                      acceptMime: 'audio/*', // 接受的文件类型为音频
+                      accept: 'file', // 允许的文件类型
+                      before: function(obj){  
+                          // 预读本地文件示例，不支持ie8  
+                          obj.preview(function(index, file, result){  
+                              $('#ID-upload-demo-audio').show(); // 显示音频元素  
+                          });  
+                          
+                          element.progress('filter-demo-Audio', '0%'); // 进度条复位  
+                          layer.msg('上传中', {icon: 16, time: 0});  
+                      },  
+                      done: function(res){  
+                          // 若上传失败  
+                          if(res.code > 0){  
+                              return layer.msg('上传失败');  
+                          }  
+                          // 上传成功的一些操作   
+                          console.log('上传成功，返回的数据:', res);  
+                          $('#ID-uploadAudio-demo-text').html(''); // 置空上传失败的状态  
+                          
+                          // 这里假设 res.data 是返回的音频 URL  
+                          $('#ID-upload-demo-audio').attr('src', res.data).show();  
+                          $('#ID-upload-demo-audio')[0].load(); // 重新加载以使用新的音频源  
+                          // $('#ID-upload-demo-audio')[0].play(); // 如果想自动播放可以加这行  
+                          
+                          uploadedAudioUrl = res.data;   
+                      },  
+                      error: function(){  
+                          // 演示失败状态，并实现重传  
+                          var demoText = $('#ID-uploadAudio-demo-text');  
+                          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');  
+                          demoText.find('.demo-reload').on('click', function(){  
+                              uploadInstAudio.upload();  
+                          });  
+                      },  
+                      // 进度条  
+                      progress: function(n, elem, e){  
+                          element.progress('filter-demo-Audio', n + '%'); // 可配合 layui 进度条元素使用  
+                          if(n == 100){  
+                              layer.msg('上传完毕', {icon: 1});  
+                          }  
+                      }  
+                  });
+         
+               //提交表单
+                form.on('submit(addSong)', function(data){
+                    var formData = data.field;
+                    
+                   
+                    formData.songImg = uploadedImageUrl || ''; 
+                    formData.source = uploadedAudioUrl || '';
+
+                    console.log("Form Data before submission:", formData);
+                    // 获取已上传的图片地址并存入 formData  
+                    if (formData.songImg) {  
+                        console.log("Uploaded image URL:", formData.songImg);  
+                    }  
+
+                    var checkedValues = []; //存放标签的value（即标签id）
+                    var checkboxes = document.querySelectorAll('input[name="tags"]:checked');
+                    checkboxes.forEach(function(checkbox) {  
+                        checkedValues.push(parseInt(checkbox.value)); // 转换为数值  
+                    });   
+
+                    // 将checkedValues数组转换为字符串，并赋值给formData.tags
+                     formData.tags = checkedValues.join(',');
+                    console.log("formDatas字符串"+formData.tags);//
+
+                    fetch('http://localhost:8080/api/songs', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(formData),
+                    })
+                    .then(response => {
+                      if (response.ok) {
+                        return response.json();
+                      }
+                      throw new Error('Failed to add song');
+                    })
+                    .then(data => {
+                      console.log('Add song successful', data.data);//
+                      layer.closeAll();  // 关闭所有弹窗
+                      location.reload(); // 刷新页面以显示新数据
+
+                      console.log('Selected Tag IDs:', checkedValues);  //
+                      console.log('Song ID:', data.data.songid);  // 
+                       // 发送标签信息到 song_tag 表
+                      return fetch('http://localhost:8080/api/songTags/addSongTags', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          songId: data.data.songid, // 使用返回的歌曲 ID
+                          tagid: checkedValues // 选中的标签 ID
+                        }),
+                      });
+                    })
+                    .then(response => {
+                      if (response.ok) {
+                        return response.json();
+                      }
+                      throw new Error('Failed to add song tags');
+                    })
+                    .then(tagData => {
+                      console.log('标签添加成功', tagData);
+                      layer.closeAll();  // 关闭所有弹窗
+                      location.reload(); // 刷新页面以显示新数据*/
+                    })
+                    .catch(error => {  
+                        console.error('Error:', error);  
+                        layer.msg(error.message); //显示错误信息  
+                    });   
+ 
+                    return false; // 阻止表单跳转。如果需要表单跳转，去掉这段即可。
+                  });
+
+                  // 取消按钮事件
+                  document.getElementById('closeBtn').addEventListener('click', function() {
+                    layer.closeAll(); // 关闭所有弹窗
+                  });
+              });
+            break;
+            case 'update':
+              if(data.length !== 1) return layer.msg('请选择一行');
+              layer.open({
+                title: '编辑',
+                type: 1,
+                area: ['80%','80%'],
+                content: `  
+                 <form class="layui-form" id="updateForm" style="padding: 16px;"> 
+                   <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲id</label>  
+                     
+                      <div class="layui-input-block">  
+                      <input type="text" name="songid" required value="${data[0].songid}" autocomplete="off" class="layui-input" readonly>
+                      </div>  
+                    </div>   
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲名称</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="songname" required  value="${data[0].songname}" autocomplete="off" class="layui-input">  
+                      </div>  
+                    </div>  
+                    <div class="layui-form-item">  
+                        <label class="layui-form-label">歌手名称</label>  
+                        <div class="layui-input-block">  
+                            <input type="text" name="artistname" id="artistName" required value="${data[0].artistname}" autocomplete="off" class="layui-input" oninput="searchArtist()">  
+                            <input type="hidden" name="artistid" id="artistId">  
+                            <div id="artistList" class="artist-list" style="display: none;"></div>   
+                        </div>  
+                    </div>  
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">专辑名称</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="albumname" id="albumName" required   value="${data[0].albumname}" autocomplete="off" class="layui-input" oninput="searchAlbum()">  
+                        <input type="hidden" name="albumid" id="albumId">  
+                        <div id="albumList" class="album-list" style="display: none;"></div> 
+                        </div>  
+                    </div>
+
+
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲图片</label>  
+                      <div class="layui-input-block">  
+                        <button type="button" class="layui-btn" id="ID-upload-demo-btn">
+                          <i class="layui-icon layui-icon-upload"></i> 单图片上传
+                        </button>
+                        <span>(如果图片不需要更改可以不上传)</span>
+                        <div style="width: 132px;">
+                          <div class="layui-upload-list">
+                            <img class="layui-upload-img" id="ID-upload-demo-img" style="width: 100%; height: 92px;">
+                            <div id="ID-upload-demo-text"></div>
+                          </div>
+                          <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="filter-demo">
+                            <div class="layui-progress-bar" lay-percent=""></div>
+                          </div>
+                        </div>
+                        <hr style="margin: 21px 0;">
+                      </div>  
+                    </div>
+                     <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲标签</label>  
+                      <div class="layui-input-block" id="tags-checkbox">
+                        
+                      </div>  
+                    
+                    </div>
+                   
+                    <div class="layui-form-item">
+                    <label class="layui-form-label">是否原创</label>
+                    <div class="layui-input-block">
+                      <input type="radio" name="original" value="true" title="true" lay-filter="filterTest">
+                      <input type="radio" name="original" value="false" title="false" lay-filter="filterTest">
+                      <input type="radio" name="original" value="" title="请选择（如果不需要更改原来数据，则不用选择）" checked>
+                    </div>
+                  </div>
+
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">是否原唱</label>
+                    <div class="layui-input-block">
+                      <input type="radio" name="originalSinger" value="true" title="true" lay-filter="filterTest">
+                      <input type="radio" name="originalSinger" value="false" title="false" lay-filter="filterTest">
+                      <input type="radio" name="originalSinger" value="" title="请选择（如果不需要更改原来数据，则不用选择）" checked>
+                    </div>
+                  </div>
+
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">是否需要vip</label>
+                    <div class="layui-input-block">
+                      <input type="radio" name="vip" value="true" title="true" lay-filter="filterTest">
+                      <input type="radio" name="vip" value="false" title="false" lay-filter="filterTest">
+                      <input type="radio" name="vip" value="" title="请选择（如果不需要更改原来数据，则不用选择）" checked>
+                    </div>
+                  </div>
+                  <div class="layui-form-item">  
+                    <label class="layui-form-label">音频地址</label>  
+                    <div class="layui-input-block">  
+                        <button type="button" class="layui-btn" id="ID-uploadAudio-demo-btn">  
+                            <i class="layui-icon layui-icon-upload"></i> 音频上传  
+                        </button>  
+                        <span>(如果音频不需要更改可以不上传)</span>
+                        <div style="width: 132px;">  
+                            <div class="layui-upload-list">  
+                                <audio id="ID-upload-demo-audio" controls style="width: 100%; height: auto; display: none;">  
+                                    <source src="" id="audioSource">  
+                                    您的浏览器不支持 audio 标签。  
+                                </audio>  
+                                <div id="ID-uploadAudio-demo-text"></div>  
+                            </div>  
+                            <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="filter-demo-Audio">  
+                                <div class="layui-progress-bar" lay-percent=""></div>  
+                            </div>  
+                        </div>  
+                        <hr style="margin: 21px 0;"> 
+                    </div>  
+                  </div>
+                  <div class="layui-form-item layui-form-text">  
+                    <div class="layui-input-block">  
+                      <button class="layui-btn" lay-submit lay-filter="updateSong">确认编辑</button>  
+                      <button type="button" class="layui-btn layui-btn-primary" id="closeBtn">取消</button>  
+                    </div>  
+                  </div>  
+                  </form>  
+                 `,  
+                 
+              });
+             
+                
+              layui.use(['form', 'layer','upload'], function(){
+                var form = layui.form;
+                var layer = layui.layer;
+                var upload = layui.upload;  
+                var element = layui.element;  
+
+                // 定义一个全局变量来存储上传后的图片信息  
+                let uploadedImageUrl = '';  
+                let uploadedAudioUrl = ''; 
+
+                if(data[0].tags){
+                const selectedTags = data[0].tags.split(',').map(tag => Number(tag.trim()));  
+                // 动态获取并渲染标签  
+                fetch('http://localhost:8080/api/tags/allTags')  
+                    .then(response => response.json())  
+                    .then(tagsData => {  
+                        var tagContainer = document.getElementById('tags-checkbox'); 
+                        tagsData.forEach(tag => {  
+                           // 检查当前标签是否在 selectedTags 中  
+                           const isChecked = selectedTags.includes(tag.tagid) ? 'checked' : '';  
+
+                            // 创建复选框 html  
+                            var checkboxHtml = `  
+                                 <input type="checkbox" name="tags" value="${tag.tagid}" title="${tag.style}" ${isChecked}>   
+                            `;  
+                            tagContainer.innerHTML += checkboxHtml;  
+                        });  
+                        form.render(); // 重新渲染表单  
+                    })  
+                    .catch(error => console.error('Error fetching tags:', error));  
+                  }else{
+                    fetch('http://localhost:8080/api/tags/allTags')  
+                    .then(response => response.json())  
+                    .then(tagsData => {  
+                        var tagContainer = document.getElementById('tags-checkbox'); 
+                        tagsData.forEach(tag => {  
+  
+                            // 创建复选框 html  
+                            var checkboxHtml = `  
+                                 <input type="checkbox" name="tags" value="${tag.tagid}" title="${tag.style}">   
+                            `;  
+                            tagContainer.innerHTML += checkboxHtml;  
+                        });  
+                        form.render(); // 重新渲染表单  
+                    })  
+                    .catch(error => console.error('Error fetching tags:', error));
+                  }
+                   // 单图片上传  
+                  var uploadInstImage = upload.render({  
+                      elem: '#ID-upload-demo-btn',  
+                      url: 'http://localhost:8080/api/songs/upload', 
+                      acceptMime: 'image/*', // 接受的文件类型为图片
+                      accept: 'images', // 允许的文件类型
+                      before: function(obj){  
+                          // 预读本地文件示例，不支持ie8  
+                          obj.preview(function(index, file, result){  
+                              $('#ID-upload-demo-img').attr('src', result).show(); // 显示图片链接（base64）
+                          });  
+                          
+                          element.progress('filter-demo', '0%'); // 进度条复位  
+                          layer.msg('上传中', {icon: 16, time: 0});  
+                      },  
+                      done: function(res){  
+                          // 若上传失败  
+                          if(res.code > 0){  
+                              return layer.msg('上传失败');  
+                          }  
+                          // 上传成功的一些操作 
+                          console.log('上传成功，返回的数据:', res);  
+                          $('#ID-upload-demo-text').html(''); // 置空上传失败的状态  
+                          uploadedImageUrl = res.data; 
+                      },  
+                      error: function(){  
+                          // 演示失败状态，并实现重传  
+                          var demoText = $('#ID-upload-demo-text');  
+                          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');  
+                          demoText.find('.demo-reload').on('click', function(){  
+                              uploadInstImage.upload();  
+                          });  
+                      },  
+                      // 进度条  
+                      progress: function(n, elem, e){  
+                          element.progress('filter-demo', n + '%'); // 可配合 layui 进度条元素使用  
+                          if(n == 100){  
+                              layer.msg('上传完毕', {icon: 1});  
+                          }  
+                      }  
+                  });  
+
+                  // 音频上传  
+                  var uploadInstAudio = upload.render({  
+                      elem: '#ID-uploadAudio-demo-btn',  
+                      url: 'http://localhost:8080/api/songs/uploadAudio',   
+                      acceptMime: 'audio/*', // 接受的文件类型为音频
+                      accept: 'file', // 允许的文件类型
+                      before: function(obj){  
+                          // 预读本地文件示例，不支持ie8  
+                          obj.preview(function(index, file, result){  
+                              $('#ID-upload-demo-audio').show(); // 显示音频元素  
+                          });  
+                          
+                          element.progress('filter-demo-Audio', '0%'); // 进度条复位  
+                          layer.msg('上传中', {icon: 16, time: 0});  
+                      },  
+                      done: function(res){  
+                          // 若上传失败  
+                          if(res.code > 0){  
+                              return layer.msg('上传失败');  
+                          }  
+                          // 上传成功的一些操作   
+                          console.log('上传成功，返回的数据:', res);  
+                          $('#ID-uploadAudio-demo-text').html(''); // 置空上传失败的状态  
+                          
+                          // 这里假设 res.data 是返回的音频 URL  
+                          $('#ID-upload-demo-audio').attr('src', res.data).show();  
+                          $('#ID-upload-demo-audio')[0].load(); // 重新加载以使用新的音频源  
+                          // $('#ID-upload-demo-audio')[0].play(); // 如果想自动播放可以加这行  
+                          
+                          uploadedAudioUrl = res.data;   
+                      },  
+                      error: function(){  
+                          // 演示失败状态，并实现重传  
+                          var demoText = $('#ID-uploadAudio-demo-text');  
+                          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');  
+                          demoText.find('.demo-reload').on('click', function(){  
+                              uploadInstAudio.upload();  
+                          });  
+                      },  
+                      // 进度条  
+                      progress: function(n, elem, e){  
+                          element.progress('filter-demo-Audio', n + '%'); // 可配合 layui 进度条元素使用  
+                          if(n == 100){  
+                              layer.msg('上传完毕', {icon: 1});  
+                          }  
+                      }  
+                  });
+                
+                form.on('submit(updateSong)', function(data){
+                  console.log("Form submitted");
+                    var formData = data.field;
+                    console.log("formData",formData);
+                    
+                    formData.songImg = uploadedImageUrl || null; 
+                    formData.source = uploadedAudioUrl || null;
+                    // 获取已上传的图片地址并存入 formData  
+                    if (formData.songImg) {  
+                        console.log("Uploaded image URL:", formData.songImg);  
+                    }  
+
+
+                    var checkedValues = []; //存放标签的value（即标签id）
+                    var checkboxes = document.querySelectorAll('input[name="tags"]:checked');
+                    checkboxes.forEach(function(checkbox) {  
+                        checkedValues.push(parseInt(checkbox.value)); // 转换为数值  
+                    });   
+
+
+                    if(checkedValues){
+                      formData.tags = checkedValues.join(','); // 将checkedValues数组转换为字符串，并赋值给formData.tags
+                    }
+                   
+                     
+                    
+
+
+                    fetch('http://localhost:8080/api/songs', {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(formData),
+                    })
+                    .then(response => {
+                      if (response.ok) {
+                        return response.json();
+                      }
+                      throw new Error('Failed to update song');
+                    })
+                    .then(data => {
+                      console.log('Update successful', data);
+                      layer.closeAll();  // 关闭所有弹窗
+                      location.reload(); // 刷新页面以显示新数据
+
+                      return fetch('http://localhost:8080/api/songTags/addSongTags', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          songId: data.data.songid, // 使用返回的歌曲 ID
+                          tagid: checkedValues // 选中的标签 ID
+                        }),
+                      });
+                    })
+                    .then(response => {
+                      if (response.ok) {
+                        return response.json();
+                      }
+                      throw new Error('Failed to update song tags');
+                    })
+                    .then(tagData => {
+                      console.log('标签添加成功', tagData);
+                      layer.closeAll();  // 关闭所有弹窗
+                      location.reload(); // 刷新页面以显示新数据*/
+                    })
+                    .catch(error => {  
+                        console.error('Error:', error);  
+                        layer.msg(error.message); //显示错误信息  
+                    });   
+ 
+                    return false; // 阻止表单跳转。如果需要表单跳转，去掉这段即可。
+                  });
+
+                  // 取消按钮事件
+                  document.getElementById('closeBtn').addEventListener('click', function() {
+                    layer.closeAll(); // 关闭所有弹窗
+                  });
+              });
+             
+            break;
+            case 'delete':
+              if(data.length === 0){
+                return layer.msg('请至少选择一行');
+              }
+              layer.msg('delete event');
+              layer.open({
+                title: '删除',
+                type: 1, //表示弹出的是一个页面层
+                area: ['60%','30%'],
+                content: `  
+                 <form class="layui-form" id="deleteForm" style="padding: 16px;"> 
+                    <div class="layui-form-item layui-form-text">  
+                      <div class="layui-input-block">  
+                        <button class="layui-btn" lay-submit lay-filter="deleteSong">确认删除</button>  
+                        <button type="button" class="layui-btn layui-btn-primary" id="closeBtn">取消</button>  
+                      </div>  
+                    </div>  
+                  </form>  
+                 `,  
+                }),
+                layui.use(['form', 'layer'], function(){  //use方法用于按需加载模块，然后执行回调函数来执行这些模块
+                  var form = layui.form;//获取表单模块
+                  var layer = layui.layer;//获取弹出层模块
+                  const deleteSongs = (data) => {  
+                    if (!data || data.length === 0) {  
+                        console.error('没有要删除的歌曲');  
+                        return;  
+                    }  
+                    form.on('submit(deleteSong)', function() {  
+                    const deletePromises = []; // 存储所有删除请求的 Promise  
+
+                    for (let i = 0; i < data.length; i++) { 
+                      console.log(i) ;
+                        const songid = data[i].songid;  
+                        // 将每个 DELETE 请求的 Promise 添加到数组中  
+                        const deletePromise = fetch('http://localhost:8080/api/songs/' + songid, {  
+                            method: 'DELETE',  
+                        })  
+                        .then(response => {  
+                            if (!response.ok) {  
+                                throw new Error('Failed to delete song with ID: ' + songid);  
+                            }  
+                            return response.json(); // 返回解析后的数据  
+                        })  
+                        .catch(error => {  
+                            console.error('Error deleting song with ID:', songid, error);  
+                        });  
+                        deletePromises.push(deletePromise); // 存储 Promise  
+                    }  
+
+                    // 等待所有删除请求完成  
+                    Promise.all(deletePromises).then(results => {  
+                        console.log('全部歌曲删除成功:', results);  
+                        layer.closeAll(); // 关闭所有弹窗  
+                        location.reload(); // 刷新页面以显示新数据  
+                    }).catch(error => {  
+                        console.error('删除过程中出现错误:', error);  
+                    });  
+
+                    return false; // 阻止表单跳转。如果需要表单跳转，去掉这段即可。
+                  }); 
+
+                };
+                deleteSongs(data);
+                
+                 /* 删除一条记录
+                    form.on('submit(deleteSong)', function(){
+                      fetch('http://localhost:8080/api/songs/' + data[0].songid, {
+                        method: 'DELETE',
+                      })
+                      .then(response => {
+                        if (response.ok) {
+                          return response.json();
+                        }
+                        throw new Error('Failed todelete song');
+                      })
+                      .then(data => {
+                        console.log('delete successful', data);
+                        layer.closeAll();  // 关闭所有弹窗
+                        location.reload(); // 刷新页面以显示新数据
+                        console.log('Received JSON data:', data); // 这里应该能看到解析后的数据
+                      })
+                      .catch(error => console.error('Error delete song:', error));                
+                    return false; // 阻止表单跳转。如果需要表单跳转，去掉这段即可。
+                  }); */
+
+                  // 取消按钮事件
+                  document.getElementById('closeBtn').addEventListener('click', function() {
+                    layer.closeAll(); // 关闭所有弹窗
+                  });
+
+                });
+            break;
+            case 'select':
+              layer.open({
+                title: '查询',
+                type: 1,
+                area: ['60%','40%'],
+                content: `  
+                 <form class="layui-form" id="selectForm" style="padding: 16px;"> 
+                  <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲名称</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="songname" placeholder="请输入查询的歌曲名称" autocomplete="off" class="layui-input">  
+                      </div>  
+                    </div>  
+                    <div class="layui-form-item layui-form-text">  
+                      <div class="layui-input-block">  
+                        <button class="layui-btn" lay-submit lay-filter="selectSong">确认</button>  
+                        <button type="button" class="layui-btn layui-btn-primary" id="closeBtn">取消</button>  
+                      </div>  
+                    </div>  
+                  </form>  
+                 `,  
+                }),
+                layui.use(['form', 'layer','table'], function(){
+                var form = layui.form;
+                var layer = layui.layer;
+                var table = layui.table; 
+
+                  form.on('submit(selectSong)', function(data){
+                    var formData = data.field;
+                    var value=formData.songname;
+                    console.log(formData.songname);  
+
+                    if(!value){
+                      layer.msg('请输入搜索内容')
+                      return false;
+                    }
+
+                    table.reload('test',{
+                      elem: '#test',
+                      url:'http://localhost:8080/api/songs/byName?songname='+value,
+                      method:'post',
+                      done: function() {
+                        layer.closeAll(); // 关闭加载数据的弹窗
+                      }
+                    });
+                    return false;
+                    
+                  });
+
+                  // 取消按钮事件
+                  document.getElementById('closeBtn').addEventListener('click', function() {
+                    layer.closeAll(); // 关闭所有弹窗
+                  });
+                    
+                });
+              break;
+              
+              
+          }
+        }
+        
+      });
+ 
+      // 重载测试
+      dropdown.render({
+        elem: '#reloadTest', // 可绑定在任意元素中，此处以上述按钮为例
+        data: [{
+          id: 'reload',
+          title: '重载'
+        },{
+          id: 'reload-deep',
+          title: '重载 - 参数叠加'
+        },{
+          id: 'reloadData',
+          title: '仅重载数据'
+        },{
+          id: 'reloadData-deep',
+          title: '仅重载数据 - 参数叠加'
+        }],
+        // 菜单被点击的事件
+        click: function(obj){
+          switch(obj.id){
+            case 'reload':
+              // 重载 - 默认（参数重置）
+              table.reload('test', {
+                where: {
+                  abc: '123456',
+                  //test: '新的 test2',
+                  //token: '新的 token2'
+                },
+                /*
+                cols: [[ // 重置表头
+                  {type: 'checkbox', fixed: 'left'},
+                  {field:'id', title:'ID', width:80, fixed: 'left', unresize: true, sort: true, totalRow: '合计：'},
+                  {field:'sex', title:'性别', width:80, edit: 'text', sort: true},
+                  {field:'experience', title:'积分', width:80, sort: true, totalRow: true, templet: '<div>{{= d.experience }} 分</div>'},
+                  {field:'logins', title:'登入次数', width:100, sort: true, totalRow: true},
+                  {field:'joinTime', title:'加入时间', width:120}
+                ]]
+                */
+              });
+            break;
+            case 'reload-deep':
+              // 重载 - 深度（参数叠加）
+              table.reload('test', {
+                where: {
+                  abc: 123,
+                  test: '新的 test1'
+                },
+                //defaultToolbar: ['print'], // 重载头部工具栏右侧图标
+                //cols: ins1.config.cols
+              }, true);
+            break;
+            case 'reloadData':
+              // 数据重载 - 参数重置
+              table.reloadData('test', {
+                where: {
+                  abc: '123456',
+                  //test: '新的 test2',
+                  //token: '新的 token2'
+                },
+                scrollPos: 'fixed',  // 保持滚动条位置不变 - v2.7.3 新增
+                height: 2000, // 测试无效参数（即与数据无关的参数设置无效，此处以 height 设置无效为例）
+                //url: '404',
+                //page: {curr: 1, limit: 30} // 重新指向分页
+              });
+            break;
+            case 'reloadData-deep':
+              // 数据重载 - 参数叠加
+              table.reloadData('test', {
+                where: {
+                  abc: 123,
+                  test: '新的 test1'
+                }
+              }, true);
+            break;
+          }
+          layer.msg('可观察 Network 请求参数的变化');
+        }
+      });
+ 
+      // 行模式
+      dropdown.render({
+        elem: '#rowMode',
+        data: [{
+          id: 'default-row',
+          title: '单行模式（默认）'
+        },{
+          id: 'multi-row',
+          title: '多行模式'
+        }],
+        // 菜单被点击的事件
+        click: function(obj){
+          var checkStatus = table.checkStatus(id)
+          var data = checkStatus.data; // 获取选中的数据
+          switch(obj.id){
+            case 'default-row':
+              table.reload('test', {
+                lineStyle: null // 恢复单行
+              });
+              layer.msg('已设为单行');
+            break;
+            case 'multi-row':
+              table.reload('test', {
+                // 设置行样式，此处以设置多行高度为例。若为单行，则没必要设置改参数 - 注：v2.7.0 新增
+                lineStyle: 'height: 95px;' 
+              });
+              layer.msg('即通过设置 lineStyle 参数可开启多行');
+            break;
+          }
+        }
+      });
+    },
+   
+   
+    error: function(res, msg){
+      console.log(res, msg)
+    }
+  });
+  
+  
+  
+  // 工具栏事件
+  table.on('toolbar(test)', function(obj){
+    var id = obj.config.id;
+    var checkStatus = table.checkStatus(id);
+    var othis = lay(this);
+    switch(obj.event){
+      case 'getCheckData':
+        var data = checkStatus.data;
+        layer.alert(layui.util.escape(JSON.stringify(data)));
+        break;
+      case 'getData':
+        var getData = table.getData(id);
+        console.log(getData);
+        layer.alert(layui.util.escape(JSON.stringify(getData)));
+        break;
+    };
+  });
+  // 表头自定义元素工具事件 --- 2.8.8+
+  table.on('colTool(test)', function(obj){
+    var event = obj.event;
+    console.log(obj);
+    if(event === 'email-tips'){
+      layer.alert(layui.util.escape(JSON.stringify(obj.col)), {
+        title: '当前列属性配置项'
+      });
+    }
+  });
+  
+  // 触发单元格工具事件
+  table.on('tool(test)', function(obj){ // 双击 toolDouble
+    // console.log(obj)
+    //obj.data可以获取当前行的所有数据
+    var data = obj.data; // 获取当前行的数据 
+    if(obj.event === 'edit'){
+      layer.open({
+        title: '编辑 - id:'+ data.songid, //使用当前的数据
+        type: 1,
+        area: ['80%','80%'],
+        content: `  
+                 <form class="layui-form" id="updateForm" style="padding: 16px;"> 
+                   <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲id</label>  
+                      <div class="layui-input-block">  
+                      <input type="text" name="songid" required value="${data.songid}" autocomplete="off" class="layui-input" readonly>
+                      </div>  
+                    </div>   
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲名称</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="songname" required  value="${data.songname}" autocomplete="off" class="layui-input">  
+                      </div>  
+                    </div>  
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">歌手id</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="artistid" required  value="${data.artistid}" autocomplete="off" class="layui-input">  
+                      </div>  
+                    </div>  
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">专辑id</label>  
+                      <div class="layui-input-block">  
+                        <input type="text" name="albumid" required   value="${data.albumid}" autocomplete="off" class="layui-input">  
+                      </div>  
+                    </div>
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲图片</label>  
+                      <div class="layui-input-block">  
+                         <button type="button" class="layui-btn" id="ID-upload-demo-btn">
+                          <i class="layui-icon layui-icon-upload"></i> 图片上传
+                        </button>
+                        <span>(如果图片不需要更改可以不上传)</span>
+                        <div style="width: 132px;">
+                          <div class="layui-upload-list">
+                            <img class="layui-upload-img" id="ID-upload-demo-img" style="width: 100%; height: 92px;">
+                            <div id="ID-upload-demo-text"></div>
+                          </div>
+                          <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="filter-demo">
+                            <div class="layui-progress-bar" lay-percent=""></div>
+                          </div>
+                        </div>
+                        <hr style="margin: 21px 0;">
+                      </div>  
+                    </div>
+                     <div class="layui-form-item">  
+                      <label class="layui-form-label">歌曲标签</label>  
+                      <div class="layui-input-block" id="tags-checkbox">
+                        
+                      </div>  
+                    
+                    </div>
+                   
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">是否原创</label>  
+                      <div class="layui-input-block">  
+                        <select name="original" id="selectId" lay-filter="filterTest">
+                          <option value="">请选择（如果不需要更改原来数据，则不用选择）</option>    
+                            <option  value="true">true</option>
+                            <option  value="false">false</option>
+                        </select>
+                      </div>  
+                    </div>
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">是否原唱</label>  
+                      <div class="layui-input-block">  
+                        <select name="originalSinger" id="selectId" lay-filter="filterTest">
+                          <option value="">请选择（如果不需要更改原来数据，则不用选择）</option>    
+                            <option  value="true">true</option>
+                            <option  value="false">false</option>
+                        </select>
+                      </div>  
+                    </div>
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">是否需要vip</label>  
+                      <div class="layui-input-block">  
+                       <select name="vip" id="selectId" lay-filter="filterTest">
+                          <option value="">请选择（如果不需要更改原来数据，则不用选择）</option>    
+                          <option value="true">true</option>
+                          <option value="false">false</option>
+                        </select>
+                      </div>  
+                    </div>
+                    <div class="layui-form-item">  
+                      <label class="layui-form-label">音频地址</label>  
+                      <div class="layui-input-block">  
+                          <button type="button" class="layui-btn" id="ID-uploadAudio-demo-btn">  
+                              <i class="layui-icon layui-icon-upload"></i> 音频上传  
+                          </button>  
+                          <span>(如果音频不需要更改可以不上传)</span>
+                          <div style="width: 132px;">  
+                              <div class="layui-upload-list">  
+                                  <audio id="ID-upload-demo-audio" controls style="width: 100%; height: auto; display: none;">  
+                                      <source src="" id="audioSource">  
+                                      您的浏览器不支持 audio 标签。  
+                                  </audio>  
+                                  <div id="ID-uploadAudio-demo-text"></div>  
+                              </div>  
+                              <div class="layui-progress layui-progress-big" lay-showPercent="yes" lay-filter="filter-demo-Audio">  
+                                  <div class="layui-progress-bar" lay-percent=""></div>  
+                              </div>  
+                          </div>  
+                          <hr style="margin: 21px 0;"> 
+                      </div>  
+                    </div>
+                    <div class="layui-form-item layui-form-text">  
+                      <div class="layui-input-block">  
+                        <button class="layui-btn" lay-submit lay-filter="updateSong">确认编辑</button>  
+                        <button type="button" class="layui-btn layui-btn-primary" id="closeBtn">取消</button>  
+                      </div>  
+                    </div>  
+                  </form>  
+                 `,  
+                 
+              });
+          layui.use(['form', 'layer','upload'], function(){
+            var form = layui.form;
+            var layer = layui.layer;
+            var upload = layui.upload;  
+            var element = layui.element;  
+
+            // 定义一个全局变量来存储上传后的图片信息  
+            let uploadedImageUrl = '';  
+            let uploadedAudioUrl = '';  
+
+   
+            if(data.tags){
+
+              const selectedTags = data.tags.split(',').map(tag => Number(tag.trim()));  
+                // 动态获取并渲染标签  
+                fetch('http://localhost:8080/api/tags/allTags')  
+                    .then(response => response.json())  
+                    .then(tagsData => {  
+                        var tagContainer = document.getElementById('tags-checkbox'); 
+                        tagsData.forEach(tag => {  
+                           // 检查当前标签是否在 selectedTags 中  
+                           const isChecked = selectedTags.includes(tag.tagid) ? 'checked' : '';  
+
+                            // 创建复选框 html  
+                            var checkboxHtml = `  
+                                 <input type="checkbox" name="tags" value="${tag.tagid}" title="${tag.style}" ${isChecked}>   
+                            `;  
+                            tagContainer.innerHTML += checkboxHtml;  
+                        });  
+                        form.render(); // 重新渲染表单  
+                    })  
+                    .catch(error => console.error('Error fetching tags:', error));
+            }else{
+
+              fetch('http://localhost:8080/api/tags/allTags')  
+                    .then(response => response.json())  
+                    .then(tagsData => {  
+                        var tagContainer = document.getElementById('tags-checkbox'); 
+                        tagsData.forEach(tag => {  
+  
+                            // 创建复选框 html  
+                            var checkboxHtml = `  
+                                 <input type="checkbox" name="tags" value="${tag.tagid}" title="${tag.style}">   
+                            `;  
+                            tagContainer.innerHTML += checkboxHtml;  
+                        });  
+                        form.render(); // 重新渲染表单  
+                    })  
+                    .catch(error => console.error('Error fetching tags:', error));
+            }        
+                    // 单图片上传  
+                    var uploadInstImage = upload.render({  
+                      elem: '#ID-upload-demo-btn',  
+                      url: 'http://localhost:8080/api/songs/upload', 
+                      acceptMime: 'image/*', // 接受的文件类型为图片
+                      accept: 'images', // 允许的文件类型
+                      before: function(obj){  
+                          // 预读本地文件示例，不支持ie8  
+                          obj.preview(function(index, file, result){  
+                              $('#ID-upload-demo-img').attr('src', result).show(); // 显示图片链接（base64）
+                          });  
+                          
+                          element.progress('filter-demo', '0%'); // 进度条复位  
+                          layer.msg('上传中', {icon: 16, time: 0});  
+                      },  
+                      done: function(res){  
+                          // 若上传失败  
+                          if(res.code > 0){  
+                              return layer.msg('上传失败');  
+                          }  
+                          // 上传成功的一些操作 
+                          console.log('上传成功，返回的数据:', res);  
+                          $('#ID-upload-demo-text').html(''); // 置空上传失败的状态  
+                          uploadedImageUrl = res.data; 
+                      },  
+                      error: function(){  
+                          // 演示失败状态，并实现重传  
+                          var demoText = $('#ID-upload-demo-text');  
+                          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');  
+                          demoText.find('.demo-reload').on('click', function(){  
+                              uploadInstImage.upload();  
+                          });  
+                      },  
+                      // 进度条  
+                      progress: function(n, elem, e){  
+                          element.progress('filter-demo', n + '%'); // 可配合 layui 进度条元素使用  
+                          if(n == 100){  
+                              layer.msg('上传完毕', {icon: 1});  
+                          }  
+                      }  
+                  });  
+
+                  // 音频上传  
+                  var uploadInstAudio = upload.render({  
+                      elem: '#ID-uploadAudio-demo-btn',  
+                      url: 'http://localhost:8080/api/songs/uploadAudio',   
+                      acceptMime: 'audio/*', // 接受的文件类型为音频
+                      accept: 'file', // 允许的文件类型
+                      before: function(obj){  
+                          // 预读本地文件示例，不支持ie8  
+                          obj.preview(function(index, file, result){  
+                              $('#ID-upload-demo-audio').show(); // 显示音频元素  
+                          });  
+                          
+                          element.progress('filter-demo-Audio', '0%'); // 进度条复位  
+                          layer.msg('上传中', {icon: 16, time: 0});  
+                      },  
+                      done: function(res){  
+                          // 若上传失败  
+                          if(res.code > 0){  
+                              return layer.msg('上传失败');  
+                          }  
+                          // 上传成功的一些操作   
+                          console.log('上传成功，返回的数据:', res);  
+                          $('#ID-uploadAudio-demo-text').html(''); // 置空上传失败的状态  
+                          
+                          // 这里假设 res.data 是返回的音频 URL  
+                          $('#ID-upload-demo-audio').attr('src', res.data).show();  
+                          $('#ID-upload-demo-audio')[0].load(); // 重新加载以使用新的音频源  
+                          // $('#ID-upload-demo-audio')[0].play(); // 如果想自动播放可以加这行  
+                          
+                          uploadedAudioUrl = res.data;   
+                      },  
+                      error: function(){  
+                          // 演示失败状态，并实现重传  
+                          var demoText = $('#ID-uploadAudio-demo-text');  
+                          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');  
+                          demoText.find('.demo-reload').on('click', function(){  
+                              uploadInstAudio.upload();  
+                          });  
+                      },  
+                      // 进度条  
+                      progress: function(n, elem, e){  
+                          element.progress('filter-demo-Audio', n + '%'); // 可配合 layui 进度条元素使用  
+                          if(n == 100){  
+                              layer.msg('上传完毕', {icon: 1});  
+                          }  
+                      }  
+                  });
+
+            
+            form.on('submit(updateSong)', function(data){
+                var formData = data.field;
+                console.log(formData);
+                 
+                formData.songImg = uploadedImageUrl || null; 
+                formData.source = uploadedAudioUrl || null; 
+                console.log("Form Data before submission:", formData);
+                // 获取已上传的图片地址并存入 formData  
+                if (formData.songImg) {  
+                    console.log("Uploaded image URL:", formData.songImg);  
+                }  
+
+
+                
+                var checkedValues = []; //存放标签的value（即标签id）
+                    var checkboxes = document.querySelectorAll('input[name="tags"]:checked');
+                    checkboxes.forEach(function(checkbox) {  
+                        checkedValues.push(parseInt(checkbox.value)); // 转换为数值  
+                    });   
+
+                    // 将checkedValues数组转换为字符串，并赋值给formData.tags
+                    formData.tags = checkedValues.join(',');
+                    
+
+                fetch('http://localhost:8080/api/songs', {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(formData),
+                })
+                .then(response => {
+                  if (response.ok) {
+                    return response.json();
+                  }
+                  throw new Error('Failed to update song');
+                })
+                .then(data => {
+                  console.log('Update successful', data);
+                  layer.closeAll();  // 关闭所有弹窗
+                  location.reload(); // 刷新页面以显示新数据
+                  console.log('Received JSON data:', data); // 这里应该能看到解析后的数据
+                  // 发送标签信息到 song_tag 表
+                  return fetch('http://localhost:8080/api/songTags/addSongTags', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          songId: data.data.songid, // 使用返回的歌曲 ID
+                          tagid: checkedValues // 选中的标签 ID
+                        }),
+                      });
+                    })
+                    .then(response => {
+                      if (response.ok) {
+                        return response.json();
+                      }
+                      throw new Error('Failed to add song tags');
+                    })
+                    .then(tagData => {
+                      console.log('标签添加成功', tagData);
+                      layer.closeAll();  // 关闭所有弹窗
+                      location.reload(); // 刷新页面以显示新数据*/
+                    })
+                    .catch(error => {  
+                        console.error('Error:', error);  
+                        layer.msg(error.message); //显示错误信息  
+                    });   
+ 
+                    return false; // 阻止表单跳转。如果需要表单跳转，去掉这段即可。
+                  });
+
+              // 取消按钮事件
+              document.getElementById('closeBtn').addEventListener('click', function() {
+                layer.closeAll(); // 关闭所有弹窗
+              });
+          });
+    } else if(obj.event === 'more'){
+      // 更多 - 下拉菜单
+      dropdown.render({
+        elem: this, // 触发事件的 DOM 对象
+        show: true, // 外部事件触发即显示
+        data: [{
+          title: '查看',
+          id: 'detail'
+        },{
+          title: '删除',
+          id: 'del'
+        }],
+        
+        click: function(menudata){
+          var data = obj.data; 
+          if(menudata.id === 'detail'){
+            layer.msg('查看操作，当前行 ID:'+ data.songid);
+            var detailHtml = '<p>详细信息如下：</p>';
+            for (var key in data) {
+                if (data.hasOwnProperty(key)) {
+                    detailHtml += '<p>' + key + ': ' + data[key] + '</p>';
+                }
+            }
+            layer.open({
+              title: '查看 - id:'+ data.songid, //使用当前的数据
+              type: 1,
+              area: ['80%','80%'],
+              content: detailHtml
+            });
+
+
+          } else if(menudata.id === 'del'){
+            layer.confirm('真的删除行 [id: '+ data.songid +'] 么', function(index){
+              
+              obj.del(); // 删除对应行（tr）的DOM结构
+              layer.close(index);
+              // 向服务端发送删除指令
+                     // 向服务端发送删除指令
+              fetch('http://localhost:8080/api/songs/' + data.songid, {
+                method: 'DELETE',
+              })
+              .then(response => {
+                if (response.ok) {
+                  return response.json();
+                }
+                throw new Error('Failed todelete song');
+              })
+              .then(data => {
+                console.log('delete successful', data);
+                layer.closeAll();  // 关闭所有弹窗
+                location.reload(); // 刷新页面以显示新数据
+                console.log('Received JSON data:', data); // 这里应该能看到解析后的数据
+              })
+              .catch(error => console.error('Error delete song:', error));
+
+
+            });
+          } 
+        },
+        align: 'right', // 右对齐弹出
+        style: 'box-shadow: 1px 1px 10px rgb(0 0 0 / 12%);' // 设置额外样式
+      })
+    }
+  });
+ 
+  // 触发表格复选框选择
+  table.on('checkbox(test)', function(obj){
+    console.log(obj)
+  });
+ 
+  // 触发表格单选框选择
+  table.on('radio(test)', function(obj){
+    console.log(obj)
+  });
+  
+  // 行单击事件
+  table.on('row(test)', function(obj){
+    //console.log(obj);
+    //layer.closeAll('tips');
+  });
+  // 行双击事件
+  table.on('rowDouble(test)', function(obj){
+    console.log(obj);
+  });
+ 
+  // 单元格编辑事件
+  table.on('edit(test)', function(obj){
+    var field = obj.field; // 得到字段
+    var value = obj.value; // 得到修改后的值
+    var data = obj.data; // 得到所在行所有键值
+    // 值的校验
+    if(field === 'email'){
+      if(!/^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/.test(obj.value)){
+        layer.tips('输入的邮箱格式不正确，请重新编辑', this, {tips: 1});
+        return obj.reedit(); // 重新编辑 -- v2.8.0 新增
+      }
+    }
+    // 编辑后续操作，如提交更新请求，以完成真实的数据更新
+    // …
+    layer.msg('编辑成功', {icon: 1});
+    
+    // 其他更新操作
+    var update = {};
+    update[field] = value;
+    obj.update(update);
+  });
+});
+
+// 当表单被提交时会触发这个事件  
+/* layui.use(['form', 'layer'], function(){
+  var form = layui.form;
+  var layer = layui.layer;
+
+  form.on('submit(addSong)', function(data) {  
+  // 这里的 `data` 包含表单所有字段的值  
+    var songData = data.field;  
+    console.log(songData);
+    // AJAX 请求可以在这里进行  
+    $.ajax({  
+      url: 'http://localhost:8080/api/songs', // 替换为实际的增歌歌曲的接口  
+      type: 'POST',  
+      contentType: 'application/json',  
+      data: JSON.stringify(songData), // 将数据转换为 JSON 格式  
+      success: function(response) {  
+        layer.msg(response.msg); // 提示用户操作结果  
+        // 例如：重新加载表格或更新数据视图  
+        table.reload('test'); // 重新加载表格数据  
+        layer.closeAll(); // 关闭所有弹层  
+      },  
+      error: function() {  
+        layer.msg('添加失败');  
+      }  
+    });  
+
+    return false; // 阻止表单的默认提交  
+  });
+}); */
+
+</script>
+</div>
+</body>
+</html>

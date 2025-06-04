@@ -1,0 +1,756 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.SongMapper">
+
+
+
+    <select id="findTop50ByThreeDaysViews" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT s.songid, s.songname, s.song_img, ar.artistname, a.albumname, s.source, s.listen_times
+        FROM song s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY s.listen_times DESC
+        LIMIT 50
+    </select>
+
+    <select id="findRecommend" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM
+        (SELECT songid, songname, artistid, albumid, song_img, source, listen_times
+        FROM song
+        ORDER BY listen_times DESC
+        LIMIT 50) AS s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY RAND()
+        LIMIT 25
+    </select>
+
+    <select id="recommendUserFavorite" resultType="com.example.demo.pojo.dto.SongDTO">
+        WITH UserHeardTags AS (
+        SELECT st.tagid, COUNT(*) AS tag_count
+        FROM heard_song hs
+        JOIN song_tag st ON hs.songid = st.songid
+        WHERE hs.userid = #{userid}
+        GROUP BY st.tagid
+        ORDER BY tag_count DESC
+        LIMIT 6
+        ),
+        RecommendedSongs AS (
+        SELECT s.songid, s.songname, s.source, s.song_img, s.artistid, s.albumid, s.listen_times
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN UserHeardTags uht ON st.tagid = uht.tagid
+        ORDER BY uht.tag_count DESC
+        LIMIT 20
+        )
+        SELECT DISTINCT rs.songid, rs.songname, rs.song_img AS songImg, a.artistname, al.albumname, rs.source, rs.listen_times
+        FROM RecommendedSongs rs
+        JOIN artist a ON rs.artistid = a.artistid
+        JOIN album al ON rs.albumid = al.albumid
+        ORDER BY RAND()
+    </select>
+
+    <select id="personal" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times
+        FROM heard_song hs
+        JOIN song s ON s.songid = hs.songid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE hs.userid = #{userid}
+        ORDER BY RAND();
+    </select>
+
+    <select id="findFavorite" resultType="com.example.demo.pojo.dto.SongDTO">
+        WITH UserHeardTags AS (
+        SELECT st.tagid, COUNT(*) AS tag_count
+        FROM favorite_song fs
+        JOIN song_tag st ON fs.songid = st.songid
+        WHERE fs.userid = #{userid}
+        GROUP BY st.tagid
+        ORDER BY tag_count DESC
+        LIMIT 6
+        ),
+        RecommendedSongs AS (
+        SELECT s.songid, s.songname, s.source, s.song_img, s.artistid, s.albumid, s.listen_times
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN UserHeardTags uht ON st.tagid = uht.tagid
+        ORDER BY uht.tag_count DESC
+        LIMIT 20
+        )
+        SELECT DISTINCT rs.songid,
+        rs.songname,
+        rs.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        rs.source,
+        rs.listen_times
+        FROM RecommendedSongs rs
+        JOIN artist a ON rs.artistid = a.artistid
+        JOIN album al ON rs.albumid = al.albumid
+        ORDER BY RAND();
+    </select>
+
+    <select id="precious" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM (SELECT songid, songname, artistid, albumid, source, listen_times, song_img
+        FROM song
+        ORDER BY like_num DESC
+        LIMIT 150) AS s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY RAND()
+        LIMIT 30;
+    </select>
+
+    <select id="hotReviews" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM (SELECT songid, songname, artistid, albumid, source, listen_times, song_img
+        FROM song
+        ORDER BY reviews DESC
+        LIMIT 150) AS s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY RAND()
+        LIMIT 30;
+    </select>
+
+    <!-- 乐迷雷达 -->
+    <select id="musicFans" parameterType="java.lang.Integer" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        DISTINCT s.songid AS songid,
+        s.songname AS songname,
+        s.song_img AS songImg,
+        ar.artistname AS artistname,
+        a.albumname AS albumname,
+        s.source,
+        s.listen_times
+        FROM follow f
+        JOIN song s ON f.artistid = s.artistid
+        JOIN album a ON s.albumid = a.albumid
+        JOIN artist ar ON s.artistid = ar.artistid
+        WHERE f.userid = #{userid}
+        ORDER BY RAND()
+        LIMIT 30;
+    </select>
+
+    <!-- 音乐年轮（重温经典） -->
+    <select id="oldSongs" resultType="com.example.demo.pojo.dto.SongDTO">
+        <![CDATA[
+        SELECT
+            DISTINCT s.songid AS songid,
+            s.songname AS songname,
+            s.song_img AS songImg,
+            ar.artistname AS artistname,
+            a.albumname AS albumname,
+            s.source,
+            s.listen_times,
+            a.publish_date
+        FROM song s
+        JOIN album a ON s.albumid = a.albumid
+        JOIN artist ar ON s.artistid = ar.artistid
+        WHERE a.publish_date <= DATE_SUB(NOW(), INTERVAL 20 YEAR)
+        ORDER BY a.publish_date ASC
+        LIMIT 30;
+    ]]>
+    </select>
+
+    <!-- 神秘雷达mysterio -->
+    <select id="mysterious" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times
+        FROM heard_song hs
+        JOIN song s ON s.songid = hs.songid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE userid = 2
+        ORDER BY RAND();
+    </select>
+
+
+
+
+    <!-- 每周新发现 -->
+    <select id="weekNew" resultType="com.example.demo.pojo.dto.SongDTO">
+        WITH UserHeardTags AS (
+        SELECT st.tagid,
+        COUNT(*) AS tag_count
+        FROM heard_song hs
+        JOIN song_tag st ON hs.songid = st.songid
+        WHERE hs.userid = 1 AND gmt_create > DATE_SUB(NOW(), INTERVAL 27 DAY)
+        GROUP BY st.tagid
+        ORDER BY tag_count DESC
+        LIMIT 6
+        ),
+        RecommendedSongs AS (
+        SELECT s.songid,
+        s.songname,
+        s.source,
+        s.song_img,
+        s.artistid,
+        s.albumid,
+        s.listen_times
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN UserHeardTags uht ON st.tagid = uht.tagid
+        ORDER BY uht.tag_count DESC
+        LIMIT 20
+        )
+        SELECT DISTINCT
+        rs.songid,
+        rs.songname,
+        rs.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        rs.source,
+        rs.listen_times
+        FROM RecommendedSongs rs
+        JOIN artist a ON rs.artistid = a.artistid
+        JOIN album al ON rs.albumid = al.albumid
+        ORDER BY RAND();
+    </select>
+
+    <!-- 会员雷达 -->
+    <select id="vip" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM
+        (
+        SELECT songid, songname, artistid, albumid, source, listen_times, song_img
+        FROM song
+        WHERE is_vip = 1
+        ) AS s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY RAND()
+        LIMIT 20;
+    </select>
+
+
+    <select id="onceLikeListen" resultType="com.example.demo.pojo.dto.SongDTO">
+        WITH TimePeriods AS (
+        SELECT
+        songid,
+        userid,
+        COUNT(CASE WHEN gmt_create &lt; DATE_SUB(NOW(), INTERVAL 1 MONTH) THEN 1 END) AS past_month_count
+        FROM heard_song
+        WHERE userid = #{userid}
+        GROUP BY songid, userid
+        )
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times,
+        tp.past_month_count
+        FROM song s
+        JOIN TimePeriods tp ON s.songid = tp.songid
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        WHERE tp.past_month_count > 0
+        ORDER BY tp.past_month_count DESC
+        LIMIT 30;
+    </select>
+
+    <!-- 时光雷达 -->
+    <select id="onceListen" parameterType="com.example.demo.pojo.User" resultType="com.example.demo.pojo.dto.SongDTO">
+        <![CDATA[
+        WITH TimePeriods AS (
+            SELECT
+                songid,
+                userid,
+                COUNT(CASE WHEN gmt_create < DATE_SUB(NOW(), INTERVAL 1 MONTH) THEN 1 END) AS past_month_count
+            FROM heard_song
+            WHERE userid = #{user.userid}
+            GROUP BY songid, userid
+        )
+        SELECT
+            DISTINCT s.songid,
+            s.songname,
+            s.song_img AS songImg,
+            ar.artistname,
+            a.albumname,
+            s.source,
+            s.listen_times,
+            tp.past_month_count
+        FROM song s
+        JOIN TimePeriods tp ON s.songid = tp.songid
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        WHERE tp.past_month_count > 0
+        ORDER BY RAND()
+        LIMIT 30;
+    ]]>
+    </select>
+
+    <!-- 日系私人雷达 -->
+    <select id="Japan" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN tag t ON st.tagid = t.tagid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE t.style LIKE '%日系%'
+        ORDER BY RAND()
+        LIMIT 12;
+    </select>
+
+    <!-- 电音推荐 -->
+    <select id="findElectronic" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN tag t ON st.tagid = t.tagid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE t.style LIKE '%电子%'
+        ORDER BY RAND()
+        LIMIT 12;
+    </select>
+
+    <!-- 国风榜 -->
+    <select id="findNational" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times AS listenTimes
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN tag t ON st.tagid = t.tagid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE t.style LIKE '%国风%'
+        ORDER BY listen_times DESC
+        LIMIT 20;
+    </select>
+    <!-- ACG榜 -->
+    <select id="findACG" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        subquery.songid,
+        subquery.songname,
+        subquery.song_img AS songImg,
+        subquery.artistname,
+        subquery.albumname,
+        subquery.source,
+        subquery.listen_times
+        FROM (
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img,
+        a.artistname,
+        al.albumname,
+        s.listen_times,
+        s.source
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN tag t ON st.tagid = t.tagid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE t.style LIKE '%动画%'
+        OR t.style LIKE '%游戏%'
+        OR t.style LIKE '%二次元%'
+        OR t.style LIKE '%小说%'
+        ORDER BY listen_times DESC
+        LIMIT 20
+        ) AS subquery;
+    </select>
+
+    <!-- 原创榜 -->
+    <select id="findOriginal" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        subquery.songid,
+        subquery.songname,
+        subquery.song_img AS songImg,
+        subquery.artistname,
+        subquery.albumname,
+        subquery.source,
+        subquery.listen_times
+        FROM (
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img,
+        a.artistname,
+        al.albumname,
+        s.listen_times,
+        s.source
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN tag t ON st.tagid = t.tagid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE is_original = 1
+        ORDER BY listen_times DESC
+        LIMIT 20
+        ) AS subquery;
+    </select>
+
+    <!-- 新歌榜 -->
+    <select id="findNewSong" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        subquery.songid,
+        subquery.songname,
+        subquery.song_img AS songImg,
+        subquery.artistname,
+        subquery.albumname,
+        subquery.source,
+        subquery.listen_times
+        FROM (
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img,
+        a.artistname,
+        al.albumname,
+        s.listen_times,
+        s.source
+        FROM song s
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE publish_date >= DATE_SUB(CURDATE(), INTERVAL 31 DAY)
+        ORDER BY listen_times DESC
+        LIMIT 20
+        ) AS subquery;
+    </select>
+
+    <!-- 飙升榜 -->
+    <select id="findSoaring" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        DISTINCT s.songid AS songid,
+        s.songname AS songname,
+        s.song_img AS songImg,
+        a.artistname AS artistname,
+        al.albumname,
+        s.source,
+        s.listen_times,
+        s.three_days_views
+        FROM song s
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        ORDER BY three_days_views DESC
+        LIMIT 20;
+    </select>
+
+    <!-- 网络热歌榜 -->
+    <select id="findHotOnline" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        subquery.songid,
+        subquery.songname,
+        subquery.song_img AS songImg,
+        subquery.artistname,
+        subquery.albumname,
+        subquery.source,
+        subquery.listen_times
+        FROM (
+        SELECT
+        DISTINCT s.songid,
+        s.songname,
+        s.song_img,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times
+        FROM song s
+        JOIN song_tag st ON s.songid = st.songid
+        JOIN tag t ON st.tagid = t.tagid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        WHERE t.style LIKE '%网络歌曲%'
+        ORDER BY listen_times DESC
+        LIMIT 20
+        ) AS subquery;
+    </select>
+
+    <!-- 歌单推荐 -->
+    <select id="getPlayList" resultType="com.example.demo.pojo.dto.PlayListDTO">
+        WITH highlevelusers AS (
+        SELECT userid
+        FROM User
+        WHERE grade > 1
+        ORDER BY RAND()
+        LIMIT 6
+        ),
+        selectedplaylists AS (
+        SELECT playlist_id, img, playlist_name
+        FROM playlist
+        WHERE userid IN (SELECT userid FROM highlevelusers) AND is_official=0
+        ORDER BY RAND()
+        LIMIT 6
+        )
+        SELECT
+        p.playlist_id,
+        p.img,
+        p.playlist_name,
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times AS listenTimes
+        FROM
+        selectedplaylists p
+        JOIN
+        playlist_song ps ON p.playlist_id = ps.playlist_id
+        JOIN
+        song s ON ps.songid = s.songid
+        JOIN
+        artist a ON s.artistid = a.artistid
+        JOIN
+        album al ON s.albumid = al.albumid
+        GROUP BY
+        p.playlist_id, s.songid, a.artistname, al.albumname;
+    </select>
+
+    <!-- 万人收藏 -->
+    <select id="collectMany" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM (
+        SELECT songid,songname,song_img, artistid, albumid, source,listen_times
+        FROM song
+        WHERE is_original=1
+        ORDER BY like_num DESC
+        LIMIT 30
+        ) AS s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY RAND()
+        LIMIT 15;
+    </select>
+    <!-- 小众推荐 -->
+    <select id="listenLittle" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM (
+        SELECT songid,songname,song_img, artistid, albumid, source,listen_times
+        FROM song
+        WHERE is_original=1
+        ORDER BY listen_times ASC
+        LIMIT 20
+        ) AS s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY RAND()
+        LIMIT 15;
+    </select>
+
+    <!-- 超高播放 -->
+    <select id="listenMany" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM (
+        SELECT songid,songname,song_img, artistid, albumid, source,listen_times
+        FROM song
+        WHERE is_original=1
+        ORDER BY listen_times DESC
+        LIMIT 20
+        ) AS s
+        JOIN artist ar ON s.artistid = ar.artistid
+        JOIN album a ON s.albumid = a.albumid
+        ORDER BY RAND()
+        LIMIT 15;
+    </select>
+
+    <!-- 艺人金曲 -->
+    <select id="artistPlayList" resultType="com.example.demo.pojo.dto.PlayListDTO">
+        WITH selectedplaylists AS (
+        SELECT playlist_id, img, playlist_name
+        FROM playlist
+        WHERE userid != 0 AND is_official=1
+        LIMIT 3
+        )
+        SELECT
+        p.playlist_id,
+        p.img,
+        p.playlist_name,
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times AS listenTimes
+        FROM
+        selectedplaylists p
+        JOIN
+        playlist_song ps ON p.playlist_id = ps.playlist_id
+        JOIN
+        song s ON ps.songid = s.songid
+        JOIN
+        artist a ON s.artistid = a.artistid
+        JOIN
+        album al ON s.albumid = al.albumid
+        GROUP BY
+        p.playlist_id, s.songid, a.artistname, al.albumname;
+    </select>
+
+    <!-- 播客推荐 -->
+    <select id="podcastRecommend" resultType="com.example.demo.pojo.dto.PodcastDTO">
+        WITH selected_pocast AS (
+        SELECT podcast_id, bio
+        FROM podcast
+        ORDER BY RAND()
+        LIMIT 12
+        )
+        SELECT
+        p.podcast_id,
+        p.bio,
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times
+        FROM selected_pocast p
+        JOIN podcast_song ps ON p.podcast_id = ps.podcast_id
+        JOIN song s ON ps.songid = s.songid
+        JOIN artist a ON s.artistid = a.artistid
+        JOIN album al ON s.albumid = al.albumid
+        GROUP BY
+        p.podcast_id, s.songid, a.artistname, al.albumname
+        ORDER BY RAND();
+    </select>
+
+    <!-- 找出用户喜欢的歌 -->
+    <select id="selectLikeMusic" parameterType="java.lang.Integer" resultType="com.example.demo.pojo.dto.SongDTO">
+        SELECT
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        ar.artistname,
+        a.albumname,
+        s.source,
+        s.listen_times
+        FROM favorite_song fs
+        JOIN song s ON fs.songid=s.songid
+        JOIN album a ON s.albumid = a.albumid
+        JOIN artist ar ON s.artistid = ar.artistid
+        WHERE fs.userid= #{userid};
+    </select>
+
+    <!-- 找出用户创建的歌单 -->
+    <select id="selectUserPlayList" parameterType="java.lang.Integer" resultType="com.example.demo.pojo.dto.PlayListDTO">
+        WITH selectedplaylists AS (
+        SELECT playlist_id, img, playlist_name
+        FROM playlist
+        WHERE userid = #{userID}
+        )
+        SELECT
+        p.playlist_id,
+        p.img,
+        p.playlist_name,
+        s.songid,
+        s.songname,
+        s.song_img AS songImg,
+        a.artistname,
+        al.albumname,
+        s.source,
+        s.listen_times AS listenTimes
+        FROM
+        selectedplaylists p
+        LEFT JOIN
+        playlist_song ps ON p.playlist_id = ps.playlist_id
+        LEFT JOIN
+        song s ON ps.songid = s.songid
+        LEFT JOIN
+        artist a ON s.artistid = a.artistid
+        LEFT JOIN
+        album al ON s.albumid = al.albumid
+        GROUP BY
+        p.playlist_id, s.songid, a.artistname, al.albumname;
+    </select>
+
+
+    <!-- 根据歌曲ID和用户ID查询收藏歌曲 -->
+    <select id="findBySongidAndUserid" parameterType="map" resultType="com.example.demo.pojo.FavoriteSong">
+        SELECT * FROM favorite_song
+        WHERE songid = #{songid} AND userid = #{userid}
+    </select>
+
+
+
+
+</mapper>
