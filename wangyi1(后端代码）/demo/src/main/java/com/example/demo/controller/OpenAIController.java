@@ -17,7 +17,7 @@ public class OpenAIController {
     private OpenAiChatModel chatModel;
 
     @GetMapping("/openai")
-    public String ollama(@RequestParam(value = "message",defaultValue = "hello")
+    public String openai(@RequestParam(value = "message",defaultValue = "hello")
                          String message) {
         String result = chatModel.call(message);
         System.out.println(result);
@@ -25,7 +25,7 @@ public class OpenAIController {
     }
 
     @GetMapping(value = "/openai/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE + ";charset=UTF-8")
-    public Flux<String> ollamaStream(@RequestParam(value = "message", defaultValue = "hello") String message) {
+    public Flux<String> openaiStream(@RequestParam(value = "message", defaultValue = "hello") String message) {
         Flux<String> result=chatModel.stream(message);
         result.subscribe(System.out::println);
         return result; // 使用 stream 方法实现流式输出 [[1]]
