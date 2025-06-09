@@ -3,49 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring AI + LM Studio Chat</title>
-    <!-- 引入 marked.js 用于渲染 Markdown -->
-    <script src="marked.min.js"></script>
+    <title>AI 助手 - 音乐管理平台</title>
+    <!-- 引入 Layui CSS -->
+    <link href="./layui/css/layui.css" rel="stylesheet">
+    <!-- 使用 CDN 引入 marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* --- 从你的 Vue 组件中提取并适配的 CSS --- */
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        /* 样式部分保持不变... */
+        html, body {
+            height: 100%;
+            overflow: hidden;
         }
-
         .chat-panel {
             background: #eff0f6;
-            height: 100vh;
+            height: 100%;
             display: flex;
             flex-direction: column;
         }
-
         .chat-title {
             text-align: center;
             font-size: 20px;
             font-weight: bold;
-            padding: 10px 0;
+            padding: 15px 0;
             border-bottom: 1px solid #ddd;
+            background-color: #fff;
+            flex-shrink: 0;
         }
-
         .message-panel {
             flex: 1;
             overflow-y: auto;
             padding: 10px;
         }
-
         .message-list {
             margin: 0 auto;
             max-width: 800px;
             width: 100%;
         }
-
         .message-item {
             margin: 15px 0;
             display: flex;
             align-items: flex-start;
         }
-
         .user-icon {
             width: 40px;
             height: 40px;
@@ -55,21 +53,17 @@
             text-align: center;
             flex-shrink: 0;
         }
-
         .message-item.user-message {
             justify-content: flex-end;
         }
-
         .message-item.user-message .user-icon {
             background: #2d65f7;
             margin-left: 10px;
             order: 2;
         }
-
         .message-item.user-message .message-content {
             order: 1;
         }
-
         .message-content.user-content .content-inner {
             background: #2d65f7;
             color: #fff;
@@ -78,12 +72,10 @@
             word-wrap: break-word;
             max-width: 100%;
         }
-
         .message-item.ai-message .user-icon {
             background: #64018f;
             margin-right: 10px;
         }
-
         .message-content.ai-content {
             background: #fff;
             border-radius: 10px;
@@ -92,14 +84,11 @@
             width: calc(100% - 50px);
             position: relative;
         }
-
-        /* Markdown 样式 */
         .ai-content p { margin: 0 0 10px 0; }
         .ai-content p:last-child { margin-bottom: 0; }
         .ai-content pre { background-color: #f5f5f5; padding: 10px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
         .ai-content code { font-family: "Courier New", Courier, monospace; }
         .ai-content ol, .ai-content ul { padding-left: 20px; }
-
         .loading-indicator {
             position: absolute;
             bottom: 5px;
@@ -111,199 +100,156 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
+        @keyframes spin { to { transform: rotate(360deg); } }
         .send-panel {
             padding: 10px;
             background: #fff;
             border-top: 1px solid #ddd;
+            flex-shrink: 0;
         }
-
         .send-form {
             max-width: 800px;
             margin: 0 auto;
             display: flex;
             align-items: flex-end;
         }
-
         .send-form textarea {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            resize: none;
-            height: 60px; /* 初始高度，可根据输入自动调整 */
-            font-size: 16px;
-            line-height: 1.4;
-            margin-right: 10px;
-            transition: height 0.2s;
+            flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; resize: none;
+            height: 60px; font-size: 16px; line-height: 1.4; margin-right: 10px; transition: height 0.2s;
         }
-
         .send-form button {
-            padding: 10px 20px;
-            background-color: #2d65f7;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            height: 44px; /* 与 textarea 对齐 */
-            font-size: 16px;
+            padding: 10px 20px; background-color: #2d65f7; color: white; border: none;
+            border-radius: 5px; cursor: pointer; height: 44px; font-size: 16px;
         }
-
-        .send-form button:disabled {
-            background-color: #a0b3d1;
-            cursor: not-allowed;
-        }
+        .send-form button:disabled { background-color: #a0b3d1; cursor: not-allowed; }
     </style>
 </head>
 <body>
-<div class="chat-panel">
-    <div class="chat-title">Spring AI Chat</div>
-    <div class="message-panel" id="message-panel">
-        <div class="message-list" id="message-list">
-            <!-- 聊天消息将在这里动态插入 -->
+
+<!-- 侧边栏 -->
+<div class="layui-side">
+    <ul class="layui-nav layui-nav-tree layui-nav-side" style="padding-top:30px">
+        <li style="width: 200px;height: 50px;margin-left: 18px;">
+            <p href="javascript:;" style="font-size: 24px; font-weight: bolder; padding-bottom: 20px; color:#f5f5f5">音乐管理平台</p>
+        </li>
+        <li class="layui-nav-item"><a href="./songTable.html">歌曲管理</a></li>
+        <li class="layui-nav-item"><a href="./artistTable.html">歌手管理</a></li>
+        <li class="layui-nav-item"><a href="./albumTable.html">专辑管理</a></li>
+        <li class="layui-nav-item"><a href="./tagTable.html">音乐标签管理</a></li>
+        <li class="layui-nav-item"><a href="./userTable.html">用户管理</a></li>
+        <li class="layui-nav-item layui-this"><a href="./AIAgent.html">大模型小助手</a></li>
+
+    </ul>
+    <a style="color: wheat; position: absolute;bottom: 30px; left: 18px;">计科221 1220204006 沈于欣</a>
+</div>
+
+<!-- 主体内容 -->
+<div class="layui-body" style="padding: 0;">
+    <div class="chat-panel">
+        <div class="chat-title">AI 助手</div>
+        <div class="message-panel" id="message-panel">
+            <div class="message-list" id="message-list"></div>
         </div>
-    </div>
-    <div class="send-panel">
-        <div class="send-form">
-            <textarea id="prompt-input" placeholder="请输入你想问的问题 (Ctrl+Enter 发送)" rows="3"></textarea>
-            <button id="send-button">发送</button>
+        <div class="send-panel">
+            <div class="send-form">
+                <textarea id="prompt-input" placeholder="请输入你想问的问题 (Ctrl+Enter 发送)" rows="3"></textarea>
+                <button id="send-button">发送</button>
+            </div>
         </div>
     </div>
 </div>
 
+<script src="./layui/layui.js"></script>
 <script>
-    // 1. 获取 DOM 元素
+    layui.use(['element'], function(){ layui.element.render('nav'); });
+
     const messagePanel = document.getElementById('message-panel');
     const messageList = document.getElementById('message-list');
     const promptInput = document.getElementById('prompt-input');
     const sendButton = document.getElementById('send-button');
 
-    // 2. 发送消息的函数
     const sendMessage = () => {
         const message = promptInput.value.trim();
-        if (!message) {
-            alert('请输入内容！');
-            return;
-        }
-
-        // 禁用输入和按钮
+        if (!message) { alert('请输入内容！'); return; }
         toggleInput(false);
-
-        // 在界面上显示用户消息
         appendMessage('user', message);
-        promptInput.value = ''; // 清空输入框
-
-        // 准备并显示 AI 消息的占位符
+        promptInput.value = '';
         const aiMessageElement = appendMessage('ai', '');
+        let fullAiResponse = '';
+        let isPastThinkBlock = false;
+        let eventSource = new EventSource(`http://localhost:8080/openai/stream?message=${encodeURIComponent(message)}`);
 
-        // --- 修改点 1: 初始化状态变量 ---
-        let fullAiResponse = '';      // 用于拼接有效的 AI 响应
-        let isPastThinkBlock = false; // 状态标志位，用于判断是否已越过 <think> 块
-        let eventSource = null;       // 将 eventSource 移到这里，以便在 onmessage 中访问
-
-        // 构建请求 URL
-        const url = `/openai/stream?message=${encodeURIComponent(message)}`;
-
-        // 3. 初始化 EventSource 连接
-        eventSource = new EventSource(url);
-
-        // 4. 监听 message 事件
+        // **** START OF FIX ****
         eventSource.onmessage = (event) => {
+            // 检查是否是流结束的信号
+            if (event.data === '[DONE]') {
+                closeConnection(); // 正常关闭连接
+                return; // 提前退出，不再执行后续代码
+            }
+
             const chunk = event.data;
-
-            // --- 修改点 2: 核心过滤逻辑 ---
             let contentToDisplay = '';
-
             if (!isPastThinkBlock) {
-                // 如果还没越过 <think> 块，就查找结束标签
                 const thinkEndTag = '</think>';
                 const tagIndex = chunk.indexOf(thinkEndTag);
-
                 if (tagIndex !== -1) {
-                    // 在当前块中找到了结束标签！
-                    // 将状态设为 true
                     isPastThinkBlock = true;
-                    // 获取这个块中，标签之后的内容
                     contentToDisplay = chunk.substring(tagIndex + thinkEndTag.length);
                 }
-                // 如果没找到标签，contentToDisplay 保持为空，当前块被忽略
             } else {
-                // 如果已经越过了 <think> 块，直接使用整个块的内容
                 contentToDisplay = chunk;
             }
-
-            // 如果有需要显示的内容
             if (contentToDisplay) {
                 fullAiResponse += contentToDisplay;
-                // 使用 marked.js 将完整的 Markdown 文本渲染为 HTML
-                // .trimStart() 用于移除可能存在于</think>标签后的初始换行符
                 aiMessageElement.innerHTML = marked.parse(fullAiResponse.trimStart());
             }
-
             scrollToBottom();
         };
 
-        // 5. 监听 error 事件 (当流关闭或发生网络错误时触发)
         const closeConnection = () => {
             if (eventSource) {
                 eventSource.close();
                 eventSource = null;
             }
-            // 移除最后一个AI消息气泡中的加载指示器
             const lastAiMessage = messageList.querySelector('.ai-message:last-child .ai-content .loading-indicator');
             if (lastAiMessage) {
                 lastAiMessage.remove();
             }
-            toggleInput(true); // 恢复输入
+            toggleInput(true);
         };
+        // **** END OF FIX ****
 
         eventSource.onerror = (error) => {
             console.error("EventSource failed:", error);
+            // 只有在连接真正失败时才显示错误，正常[DONE]关闭时不显示
+            if (aiMessageElement.querySelector('.loading-indicator')) {
+                aiMessageElement.innerHTML = '<span style="color: red;">连接异常中断，请检查后端服务。</span>';
+            }
             closeConnection();
         };
     };
 
-    // 切换输入框和按钮的可用状态
     const toggleInput = (enabled) => {
         promptInput.disabled = !enabled;
         sendButton.disabled = !enabled;
     };
 
-    // 在消息列表追加消息
     const appendMessage = (type, content) => {
         const messageItem = document.createElement('div');
         messageItem.className = `message-item ${type}-message`;
-
         if (type === 'user') {
-            messageItem.innerHTML = `
-                <div class="message-content user-content">
-                    <div class="content-inner">${content}</div>
-                </div>
-                <div class="user-icon">我</div>
-            `;
-        } else { // AI
-            messageItem.innerHTML = `
-                <div class="user-icon">AI</div>
-                <div class="message-content ai-content">
-                    <div class="loading-indicator"></div>
-                </div>
-            `;
+            const safeContent = content.replace(/</g, "<").replace(/>/g, ">");
+            messageItem.innerHTML = `<div class="message-content user-content"><div class="content-inner">${safeContent}</div></div><div class="user-icon">我</div>`;
+        } else {
+            messageItem.innerHTML = `<div class="user-icon">AI</div><div class="message-content ai-content"><div class="loading-indicator"></div></div>`;
         }
-
         messageList.appendChild(messageItem);
         scrollToBottom();
         return messageItem.querySelector('.ai-content');
     };
 
-    // 滚动到底部
-    const scrollToBottom = () => {
-        messagePanel.scrollTop = messagePanel.scrollHeight;
-    };
+    const scrollToBottom = () => { messagePanel.scrollTop = messagePanel.scrollHeight; };
 
-    // 6. 绑定事件监听器
     sendButton.addEventListener('click', sendMessage);
     promptInput.addEventListener('keydown', (event) => {
         if (event.ctrlKey && event.key === 'Enter') {
