@@ -178,6 +178,42 @@
     const messageList = document.getElementById('message-list');
     const promptInput = document.getElementById('prompt-input');
     const sendButton = document.getElementById('send-button');
+    let resultString;
+
+    const fetchSongs = fetch('http://localhost:8080/api/songs/allsongs')
+        .then(response => response.json());
+
+    const fetchTags = fetch('http://localhost:8080/api/tags/alltags')
+        .then(response => response.json());
+
+    const fetchSongTags = fetch('http://localhost:8080/api/songTags')
+        .then(response => response.json());
+
+    // 2. 使用 Promise.all 等待所有请求完成
+    Promise.all([fetchSongs, fetchTags, fetchSongTags])
+        .then(([songsData, tagsData, songTagsData]) => {
+            // 到这里时，三个数据变量都已经准备好了
+
+            // 3. 将每个数据对象转换为格式化的 JSON 字符串
+            // 使用 JSON.stringify 的第三个参数 '  ' 可以让输出的 JSON 格式化，更易读
+            const songsString = JSON.stringify(songsData, null, '  ');
+            const tagsString = JSON.stringify(tagsData, null, '  ');
+            const songTagsString = JSON.stringify(songTagsData, null, '  ');
+
+            // 4. 使用模板字符串将标题和数据拼接成一个长字符串
+            const finalLongString = `
+--- Tags ---
+${tagsString}
+        `;
+            resultString = finalLongString;
+
+            // 5. 输出最终的长字符串
+            console.log(finalLongString);
+        })
+        .catch(error => {
+            // 如果任何一个请求失败，就会捕获到错误
+            console.error('在获取或组织数据时发生错误:', error);
+        });
 
     const sendMessage = () => {
         const message = promptInput.value.trim();
@@ -188,7 +224,8 @@
         const aiMessageElement = appendMessage('ai', '');
         let fullAiResponse = '';
         let isPastThinkBlock = false;
-        let eventSource = new EventSource(`http://localhost:8080/openai/stream?message=${encodeURIComponent(message)}`);
+        let finalmessage=resultString+"用户输入:"+message;
+        let eventSource = new EventSource(`http://localhost:8080/openai/stream?message=${encodeURIComponent(finalmessage)}`);
 
         eventSource.onmessage = (event) => {
             // 检查是否是流结束的信号

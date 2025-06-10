@@ -16,7 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-
+@CrossOrigin
 @RestController
 @RequestMapping("/api/songs")
 public class SongController {
