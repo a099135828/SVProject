@@ -9,6 +9,17 @@
     <!-- 使用 CDN 引入 marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
+        /* **** START OF FIX **** */
+        /* 为主内容区设置绝对定位，使其填充侧边栏右侧的剩余空间 */
+        .layui-body {
+            position: absolute;
+            left: 200px; /* 与侧边栏宽度一致 */
+            right: 0;
+            top: 0;
+            bottom: 0;
+        }
+        /* **** END OF FIX **** */
+
         /* 样式部分保持不变... */
         html, body {
             height: 100%;
@@ -179,7 +190,6 @@
         let isPastThinkBlock = false;
         let eventSource = new EventSource(`http://localhost:8080/openai/stream?message=${encodeURIComponent(message)}`);
 
-        // **** START OF FIX ****
         eventSource.onmessage = (event) => {
             // 检查是否是流结束的信号
             if (event.data === '[DONE]') {
@@ -217,7 +227,7 @@
             }
             toggleInput(true);
         };
-        // **** END OF FIX ****
+
 
         eventSource.onerror = (error) => {
             console.error("EventSource failed:", error);
